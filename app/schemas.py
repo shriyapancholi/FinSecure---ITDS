@@ -29,3 +29,29 @@ class Token(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+    # FILE: app/schemas.py
+
+class LogCreate(BaseModel):
+    user_id: int
+    action: str
+
+
+class LogOut(BaseModel):
+    id: int
+    user_id: int
+    action: str
+    timestamp: datetime
+    hash: str
+
+    class Config:
+        orm_mode = True
+
+
+class LogIntegrityOut(BaseModel):
+    id: int
+    file_date: date
+    final_hash: str
+    verified_at: datetime
+
+    class Config:
+        orm_mode = True
