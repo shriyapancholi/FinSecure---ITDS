@@ -1,3 +1,5 @@
+from fastapi import FastAPI, Request
+
 from typing import Annotated, List
 from datetime import datetime
 
@@ -10,6 +12,31 @@ from app import models, database, schemas
 from app.utils.security import hash_password, verify_password, create_access_token, decode_token
 
 app = FastAPI(title="Insider Threat System API", version="0.1.0")
+# FILE: app/main.py
+from starlette.concurrency import run_in_threadpool
+from app.logging_module.logger import create_db_log
+from app.database import SessionLocal
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    response = await call_next(request)
+
+    async def _log():
+        db = SessionLocal()
+        try:
+            # If JWT auth is used, extract user_id from token
+            user_id = 0
+            action = f"{request.method} {request.url.path}"
+            await run_in_threadpool(create_db_log, db, user_id, action)
+        finally:
+            db.close()
+
+    # Fire and forget
+    import asyncio
+    asyncio.create_task(_log())
+
+    return response
+
 
 bearer_scheme = HTTPBearer(description="Paste JWT from /auth/login")
 
