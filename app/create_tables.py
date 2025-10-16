@@ -1,6 +1,7 @@
 # create_tables.py
-from database import Base, engine
-import models
+# app/create_tables.py (top)
+from .database import Base, engine
+from .models import *
 
 # ensure models are imported so they're registered with Base
 
