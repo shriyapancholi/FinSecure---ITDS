@@ -1,7 +1,7 @@
 # app/main.py
 import asyncio
 from datetime import datetime, date, timedelta, time as dt_time
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 from functools import partial
 import os
 
@@ -18,7 +18,7 @@ from app.utils.security import (
     hash_password, verify_password,
     create_access_token, decode_token
 )
-from app.database import SessionLocal
+from app.database import SessionLocal, get_db
 from logging_module.logger import create_db_log
 from logging_module import integrity_check
 from logging_module.integrity_check import (
@@ -37,9 +37,9 @@ app = FastAPI(
     description="FinSecure backend — Auth, RBAC, Logging, and Threat Detection 🚀",
 )
 
-# Optional: enforce admin role for /admin/* paths
-# AdminMiddleware = admin_prefix_middleware_factory(("admin",))
-# app.add_middleware(AdminMiddleware)
+# include threat detection router after `app` exists
+from threat_detection.responses_routes import router as threat_router
+app.include_router(threat_router)
 
 
 # --------------------------------------------------
@@ -68,17 +68,6 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
-
-
-# --------------------------------------------------
-# Database Dependency
-# --------------------------------------------------
-def get_db():
-    db = database.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 # --------------------------------------------------
@@ -202,7 +191,7 @@ def admin_ping(user=Depends(require_roles_db("admin"))):
 # ADMIN LOGGING & INTEGRITY ROUTES
 # --------------------------------------------------
 @app.get("/admin/logs/verify")
-def admin_verify_log(target_date: str | None = None, user=Depends(require_roles_db("admin"))):
+def admin_verify_log(target_date: Optional[str] = None, user=Depends(require_roles_db("admin"))):
     """
     Verify the per-day log file for `target_date` (YYYY-MM-DD). Defaults to today.
     """
@@ -227,7 +216,7 @@ def admin_verify_all(user=Depends(require_roles_db("admin"))):
 
 @app.post("/admin/logs/seal")
 def admin_seal_logs(
-    target_date: str | None = None,
+    target_date: Optional[str] = None,
     user=Depends(require_roles_db("admin")),
 ):
     """Seal a day’s log after verifying it."""

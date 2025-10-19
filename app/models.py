@@ -1,6 +1,18 @@
 # app/models.py
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Enum, DateTime, Date, ForeignKey, text, Index
+import json
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Enum,
+    DateTime,
+    Date,
+    ForeignKey,
+    Text,
+    text,
+    Index,
+)
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -13,10 +25,8 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(64), unique=True, index=True, nullable=False)
-    # renamed to match auth code naming used elsewhere: "hashed_password"
     hashed_password = Column(String(255), nullable=False)
 
-    # enum names should match any existing DB enum names (role_enum, status_enum)
     role = Column(Enum(*ROLE_VALUES, name="role_enum"), nullable=False)
 
     status = Column(
@@ -26,12 +36,11 @@ class User(Base):
     )
 
     created_at = Column(
-        DateTime(timezone=False),           # MySQL DATETIME (no timezone)
+        DateTime(timezone=False),
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP"),
     )
 
-    # relationship for convenience (optional)
     logs = relationship("Log", back_populates="user", cascade="all, delete-orphan")
 
 
@@ -39,16 +48,11 @@ class Log(Base):
     __tablename__ = "logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    # foreign key to users table for integrity
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     action = Column(String(255), nullable=False)
-    # store timestamp with DB default to avoid mismatches
     timestamp = Column(DateTime(timezone=False), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
-    # SHA-256 hex is 64 chars
-    # Note: name 'hash' is okay but shadows builtin 'hash' — keep if other code expects this column name.
     hash = Column(String(64), nullable=False, index=True)
 
-    # optional relationship back to User
     user = relationship("User", back_populates="logs")
 
 
@@ -61,5 +65,33 @@ class LogIntegrity(Base):
     verified_at = Column(DateTime(timezone=False), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
 
 
-# Extra indexes (if helpful)
+class ResponseModel(Base):
+    """
+    Rule-engine responses / automated actions table.
+    Stored as JSON-text in `details` for compatibility.
+    """
+    __tablename__ = "responses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(128), nullable=False, index=True)
+    rule = Column(String(128), nullable=False, index=True)
+    severity = Column(String(32), nullable=False, index=True)
+    timestamp = Column(DateTime(timezone=False), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
+    details = Column(Text, nullable=True)
+
+    def to_dict(self):
+        try:
+            details = json.loads(self.details) if self.details else {}
+        except Exception:
+            details = {"raw": self.details}
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "rule": self.rule,
+            "severity": self.severity,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "details": details,
+        }
+
+
 Index("ix_logs_user_timestamp", Log.user_id, Log.timestamp)
