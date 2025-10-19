@@ -1,4 +1,4 @@
-#!/Users/shriyapancholi/Desktop/insider-threat-system/FinSecure---ITDS/venv/bin/python
+#!/Users/shriyapancholi/Desktop/FinSecure---ITDS/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

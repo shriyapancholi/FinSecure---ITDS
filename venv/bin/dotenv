@@ -1,4 +1,4 @@
-#!/Users/shriyapancholi/Desktop/insider-threat-system/FinSecure---ITDS/venv/bin/python
+#!/Users/shriyapancholi/Desktop/FinSecure---ITDS/venv/bin/python3
 import sys
 from dotenv.__main__ import cli
 if __name__ == '__main__':

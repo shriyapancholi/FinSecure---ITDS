@@ -1,0 +1,1 @@
+{"user_id": 0, "action": "TEST_ACTION", "timestamp": "2025-10-18T15:25:01.455353", "ip_address": "127.0.0.1", "details": {"x": 1}, "previous_hash": "d2e2fea456bc47bb1d4d26902ccedc16239544143b50e3a1b8850cd36982a3b0", "hash": "b580c3fede5fe936a7970030eaaf7a0bcac697f6fe8d49790b8a802447f42214", "file_name": "logs_2025-10-18.jsonl"}
