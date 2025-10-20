@@ -262,6 +262,69 @@ def create_log(
             pass
         raise
 
+    # ----------------------- ML scoring & anomaly persistence -----------------------
+    # Non-blocking, defensive: if ML module/model not available, this will quietly no-op.
+    try:
+        # import scorer (user's ML module). It must expose score_record(record: dict) -> dict
+        from threat_detection.ml_model import score_record  # type: ignore
+    except Exception:
+        score_record = None
+
+    if score_record:
+        try:
+            # score_record expects a JSON-serializable dict of features — use file_obj
+            ml_res = score_record(file_obj)
+        except Exception as e:
+            # scoring failed — don't block logging; print debug and continue
+            print("ML scoring failed:", repr(e))
+            ml_res = {"score": 0.0, "is_anomaly": False, "severity": "low"}
+
+        if bool(ml_res.get("is_anomaly")):
+            # try to persist to an anomalies table if present, otherwise write into ResponseModel as fallback
+            try:
+                # try to import Anomaly model (if you created it), and ResponseModel as a fallback
+                try:
+                    from app.models import Anomaly  # type: ignore
+                except Exception:
+                    Anomaly = None
+                try:
+                    from app.models import ResponseModel  # type: ignore
+                except Exception:
+                    ResponseModel = None
+
+                features_json = json.dumps(file_obj, default=str, ensure_ascii=False)
+
+                if Anomaly is not None:
+                    a_row = Anomaly(
+                        user_id=str(sanitized_user_id or "system"),
+                        score=float(ml_res.get("score", 0.0)),
+                        severity=str(ml_res.get("severity", "medium")),
+                        features=features_json,
+                    )
+                    db.add(a_row)
+                    db.commit()
+                elif ResponseModel is not None:
+                    # store as a system response fallback
+                    r_row = ResponseModel(
+                        user_id="system",
+                        rule="ml_anomaly",
+                        severity=str(ml_res.get("severity", "medium")),
+                        details=json.dumps({"score": ml_res.get("score"), "features": file_obj}, default=str, ensure_ascii=False)
+                    )
+                    db.add(r_row)
+                    db.commit()
+                else:
+                    # nothing to persist to DB; log to stdout for visibility
+                    print("ML anomaly detected but no persistence model available:", ml_res)
+            except Exception as e:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+                print("Failed to persist ML anomaly:", repr(e))
+
+    # ------------------------------------------------------------------------------
+
     return new_log
 
 

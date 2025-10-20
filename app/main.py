@@ -37,6 +37,9 @@ app = FastAPI(
     description="FinSecure backend — Auth, RBAC, Logging, and Threat Detection 🚀",
 )
 
+from threat_detection.ml_routes import router as ml_router
+app.include_router(ml_router)
+
 # include threat detection router after `app` exists
 from threat_detection.responses_routes import router as threat_router
 app.include_router(threat_router)

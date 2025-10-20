@@ -10,6 +10,7 @@ from sqlalchemy import (
     Date,
     ForeignKey,
     Text,
+    Float,        # ✅ Must be capital F
     text,
     Index,
 )
@@ -92,6 +93,15 @@ class ResponseModel(Base):
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "details": details,
         }
+    
+class Anomaly(Base):
+    __tablename__ = "anomalies"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(128), nullable=False, index=True)
+    score = Column(Float, nullable=False)                # ✅ Must be Float, not float
+    severity = Column(String(32), nullable=False)
+    features = Column(Text)
+    timestamp = Column(DateTime(timezone=False), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
 
 
 Index("ix_logs_user_timestamp", Log.user_id, Log.timestamp)
