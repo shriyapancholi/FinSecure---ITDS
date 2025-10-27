@@ -1,7 +1,11 @@
 from flask import Flask, render_template
 import json
 import os
-import time # Import time for better error reporting
+import time
+import subprocess  # REQUIRED for forcing browser launch in .exe
+import sys         # REQUIRED to detect if running as an .exe
+import threading   # REQUIRED for safe thread launching
+from flask import request # Necessary for active link tracking in base.html
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -17,13 +21,12 @@ def read_metrics():
         try:
             with open(METRICS_FILE, 'r') as f:
                 return json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            # Report the error but return default data
-            print(f"[{time.strftime('%H:%M:%S')}] ERROR: Cannot read metrics.json. Daemon may be saving data.")
+        except (json.JSONDecodeError, IOError):
             pass
+    
     # CRITICAL: Always return a default dictionary if the file is missing/unreadable.
-    # This prevents the 'metrics is undefined' error.
     return {'cpu_usage': '--', 'mem_usage': '--', 'is_spike': False}
+
 
 # --- ROUTES ---
 
@@ -35,19 +38,13 @@ def login():
 @app.route('/dashboard')
 def dashboard():
     admin_name = "Admin Yashvi"
-    
-    # 1. READ THE REAL-TIME DATA (Always returns a dictionary)
     metrics = read_metrics()
     
-    # 2. RENDER THE TEMPLATE with all the variables
-    # The 'metrics' variable is guaranteed to be defined here.
     return render_template(
         'dashboard.html', 
         username=admin_name, 
-        metrics=metrics # Pass the metrics dictionary to the HTML
+        metrics=metrics
     )
-
-# --- ADD THESE NEW ROUTES TO app.py ---
 
 @app.route('/alerts_detail')
 def alerts_detail():
@@ -68,9 +65,24 @@ def user_management():
     ]
     return render_template('user_management.html', users=users)
 
-# ----------------------------------------
+# --- FINAL LAUNCH LOGIC (Includes .EXE Fix) ---
 
-# --- RUN THE APP ---
+def launch_browser():
+    """Forces the browser to open using the Windows start command."""
+    # Give the Flask server a moment to start up before launching the browser
+    time.sleep(1) 
+    url = "http://127.0.0.1:5000/login"
+    
+    # 'start' is the reliable Windows shell command for opening the default browser
+    subprocess.run(['start', url], shell=True) 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Check if the app is running as a bundled executable (.exe)
+    if getattr(sys, 'frozen', False):
+        # If it's the .exe, launch the browser in a new thread and run the app
+        threading.Thread(target=launch_browser).start()
+        # Run the app in production mode
+        app.run(debug=False)
+    else:
+        # If running via 'python app.py' in VS Code, use development mode
+        app.run(debug=True)

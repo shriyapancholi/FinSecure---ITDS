@@ -7,10 +7,18 @@
     <!-- This block ensures there's a small gap below the fixed Navbar -->
     <div class="pt-3"></div>
 
-    <!-- The dashboard content starts here -->
+    <!-- START: DYNAMIC ALERT BANNER (New High-Impact Feature) -->
+    {% if metrics.is_spike %}
+    <div class="alert alert-danger mx-4 shadow-sm" role="alert">
+        <h4 class="alert-heading fw-bold"><i class="bi bi-exclamation-octagon-fill me-2"></i>CRITICAL ANOMALY DETECTED!</h4>
+        <p>A **Rate Spike** (CPU usage exceeding 90%) was detected by the Daemon. Automated mitigation protocols have been initiated. Review the Alerts Feed immediately.</p>
+    </div>
+    {% endif %}
+    <!-- END: DYNAMIC ALERT BANNER -->
+
     <div class="container-fluid p-4">
         
-        <!-- 1. HEADER ROW: Welcome Message & Integrity Status -->
+        <!-- HEADER ROW -->
         <div class="row mb-4 border-bottom pb-2">
             <div class="col-md-8">
                 <h2 class="fw-bold" style="color: var(--bs-primary-dark-text);">
@@ -20,23 +28,27 @@
             <div class="col-md-4 text-end d-flex align-items-center justify-content-end">
                 
                 <!-- Integrity Status (Dynamic Color) -->
-                {% if metrics.is_spike %}
-                    <span class="badge bg-danger p-3 fs-6 rounded-pill shadow-sm me-2"><i class="bi bi-x-octagon-fill me-2"></i>Integrity Alert!</span>
-                {% else %}
-                    <span class="badge bg-success p-3 fs-6 rounded-pill shadow-sm me-2"><i class="bi bi-check-circle-fill me-2"></i>Integrity Status: OK</span>
-                {% endif %}
+                <span class="badge {% if metrics.is_spike %}bg-danger{% else %}bg-success{% endif %} p-3 fs-6 rounded-pill shadow-sm me-2">
+                    <i class="bi {% if metrics.is_spike %}bi-x-octagon-fill{% else %}bi-check-circle-fill{% endif %} me-2"></i>
+                    Integrity Status: {% if metrics.is_spike %}ALERT{% else %}OK{% endif %}
+                </span>
 
-                <!-- Current Date/Time Display (Using Jinja2's 'now' variable) -->
+                <!-- Current Date/Time Display -->
                 <span class="badge bg-info p-3 fs-6 rounded-pill shadow-sm"><i class="bi bi-calendar-event me-2"></i>{{ "now" }}</span>
             </div>
         </div>
         
-        <!-- 2. STATUS ROW: CPU & Memory Metrics (Showing REAL DATA) -->
+        <!-- SECTION HEADING: System Health -->
+        <h4 class="text-muted border-bottom mb-3 pb-1" style="color: var(--bs-primary-dark-text) !important;">
+            <i class="bi bi-hdd-fill me-2"></i> System Health & Telemetry
+        </h4>
+
+        <!-- STATUS ROW: CPU & Memory Metrics (Showing REAL DATA) -->
         <div class="row mb-4 g-4">
             
-            <!-- CPU Card -->
+            <!-- CPU Card (Dynamic Border and Icon) -->
             <div class="col-md-3">
-                <div class="card bg-light border-dark h-100 shadow"> 
+                <div class="card bg-light {% if metrics.is_spike %}border-danger shadow-lg{% else %}border-dark shadow{% endif %} h-100"> 
                     <div class="card-body">
                         <h5 class="card-title text-muted"><i class="bi bi-cpu me-2"></i>CPU Utilization</h5>
                         <!-- Dynamic text color for CPU spike -->
@@ -64,12 +76,17 @@
                     <div class="card-body">
                         <h5 class="card-title text-info"><i class="bi bi-info-circle-fill me-2"></i>OS Metrics Key</h5>
                         <p class="card-text small text-muted">
-                            This area shows real-time metrics collected by **detector.py**. The Integrity Alert badge and CPU reading turn red if CPU exceeds 90% (Rate Spike Detection).
+                            This area shows real-time metrics collected by **detector.py**. The Integrity Alert badge and CPU card will visually signal when usage exceeds the 90% threshold.
                         </p>
                     </div>
                 </div>
             </div>
         </div>
+        
+        <!-- SECTION HEADING: Threat Monitoring -->
+        <h4 class="text-muted border-bottom mb-3 pb-1" style="color: var(--bs-primary-dark-text) !important;">
+            <i class="bi bi-incognito me-2"></i> Threat Monitoring & Auditing
+        </h4>
 
         <!-- 3. MAIN CONTENT ROW: Alerts and Timeline (Placeholders for Teammates' Data) -->
         <div class="row g-4">
