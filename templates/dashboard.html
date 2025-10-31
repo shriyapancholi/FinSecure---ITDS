@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Sentinel OS: Threat Dashboard{% endblock %}
+
+{% block content %}
+    
+    <!-- This block ensures there's a small gap below the fixed Navbar -->
+    <div class="pt-3"></div>
+
+    <!-- START: DYNAMIC ALERT BANNER (New High-Impact Feature) -->
+    {% if metrics.is_spike %}
+    <div class="alert alert-danger mx-4 shadow-sm" role="alert">
+        <h4 class="alert-heading fw-bold"><i class="bi bi-exclamation-octagon-fill me-2"></i>CRITICAL ANOMALY DETECTED!</h4>
+        <p>A **Rate Spike** (CPU usage exceeding 90%) was detected by the Daemon. Automated mitigation protocols have been initiated. Review the Alerts Feed immediately.</p>
+    </div>
+    {% endif %}
+    <!-- END: DYNAMIC ALERT BANNER -->
+
+    <div class="container-fluid p-4">
+        
+        <!-- HEADER ROW -->
+        <div class="row mb-4 border-bottom pb-2">
+            <div class="col-md-8">
+                <h2 class="fw-bold" style="color: var(--bs-primary-dark-text);">
+                    Sentinel OS: Threat Matrix for User: <span style="color: var(--bs-accent-color);">Admin Yashvi</span>
+                </h2> 
+            </div>
+            <div class="col-md-4 text-end d-flex align-items-center justify-content-end">
+                
+                <!-- Integrity Status (Dynamic Color) -->
+                <span class="badge {% if metrics.is_spike %}bg-danger{% else %}bg-success{% endif %} p-3 fs-6 rounded-pill shadow-sm me-2">
+                    <i class="bi {% if metrics.is_spike %}bi-x-octagon-fill{% else %}bi-check-circle-fill{% endif %} me-2"></i>
+                    Integrity Status: {% if metrics.is_spike %}ALERT{% else %}OK{% endif %}
+                </span>
+
+                <!-- Current Date/Time Display -->
+                <span class="badge bg-info p-3 fs-6 rounded-pill shadow-sm"><i class="bi bi-calendar-event me-2"></i>{{ "now" }}</span>
+            </div>
+        </div>
+        
+        <!-- SECTION HEADING: System Health -->
+        <h4 class="text-muted border-bottom mb-3 pb-1" style="color: var(--bs-primary-dark-text) !important;">
+            <i class="bi bi-hdd-fill me-2"></i> System Health & Telemetry
+        </h4>
+
+        <!-- STATUS ROW: CPU & Memory Metrics (Showing REAL DATA) -->
+        <div class="row mb-4 g-4">
+            
+            <!-- CPU Card (Dynamic Border and Icon) -->
+            <div class="col-md-3">
+                <div class="card bg-light {% if metrics.is_spike %}border-danger shadow-lg{% else %}border-dark shadow{% endif %} h-100"> 
+                    <div class="card-body">
+                        <h5 class="card-title text-muted"><i class="bi bi-cpu me-2"></i>CPU Utilization</h5>
+                        <!-- Dynamic text color for CPU spike -->
+                        <p class="card-text display-4 fw-bold 
+                            {% if metrics.is_spike %}text-danger{% else %}text-secondary{% endif %}">
+                            {{ metrics.cpu_usage }} %
+                        </p> 
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Memory Card -->
+            <div class="col-md-3">
+                <div class="card bg-light border-secondary h-100 shadow">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted"><i class="bi bi-memory me-2"></i>Memory Usage</h5>
+                        <p class="card-text display-4 text-secondary fw-bold">{{ metrics.mem_usage }} %</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Metrics Key Card -->
+            <div class="col-md-6">
+                <div class="card border-info bg-light h-100 shadow">
+                    <div class="card-body">
+                        <h5 class="card-title text-info"><i class="bi bi-info-circle-fill me-2"></i>OS Metrics Key</h5>
+                        <p class="card-text small text-muted">
+                            This area shows real-time metrics collected by **detector.py**. The Integrity Alert badge and CPU card will visually signal when usage exceeds the 90% threshold.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECTION HEADING: Threat Monitoring -->
+        <h4 class="text-muted border-bottom mb-3 pb-1" style="color: var(--bs-primary-dark-text) !important;">
+            <i class="bi bi-incognito me-2"></i> Threat Monitoring & Auditing
+        </h4>
+
+        <!-- 3. MAIN CONTENT ROW: Alerts and Timeline (Placeholders for Teammates' Data) -->
+        <div class="row g-4">
+            
+            <!-- Alerts Feed & Automated Responses (Person C's Data) -->
+            <div class="col-md-6">
+                <div class="card border-danger shadow-lg h-100">
+                    <div class="card-header text-white gradient-header"> 
+                        <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i>Alerts Feed & Automated Responses</h5>
+                    </div>
+                    <ul class="list-group list-group-flush"> 
+                        <li class="list-group-item bg-light text-danger fw-bold">Placeholder: User X account **Suspended** (Rule Violation)</li>
+                        <li class="list-group-item bg-light text-warning">Placeholder: Rate Spike Detected (Daemon/Rules)</li>
+                        <li class="list-group-item bg-light text-muted">Placeholder: Soft Alert issued to User Y</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Recent User Timeline (Person B's Data) -->
+            <div class="col-md-6">
+                <div class="card shadow-lg h-100">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="bi bi-person-lines-fill me-2"></i>Recent User Timeline (All Actions)</h5>
+                    </div>
+                    <table class="table table-striped table-hover"> 
+                        <thead>
+                            <tr class="table-light"><th>Time</th><th>User</th><th>Action</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>10:05:30</td><td>JaneD</td><td>Access outside office hours</td></tr>
+                            <tr><td>10:05:00</td><td>JohnS</td><td>Fake Transaction attempt (ML Flagged)</td></tr>
+                            <tr><td>10:04:15</td><td>JaneD</td><td>Successful login</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management - Sentinel OS{% endblock %}
+
+{% block content %}
+    <div class="container py-4">
+        <h2 class="fw-bold mb-4" style="color: var(--bs-primary-dark-text);">
+            <i class="bi bi-people-fill me-2"></i> User & Role Management (RBAC)
+        </h2>
+        
+        <div class="alert alert-info border-info" role="alert">
+            **Note:** This page visualizes the access control features managed by Shriya's **Authentication & RBAC** component.
+        </div>
+        
+        <div class="card shadow-sm">
+            <div class="card-header gradient-header text-white fw-bold">
+                Active System Users and Assigned Roles
+            </div>
+            <div class="card-body bg-light">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Loop through the placeholder data passed from app.py -->
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.name }}</td>
+                            <td>{{ user.role }}</td>
+                            <td><span class="badge bg-{% if user.status == 'Restricted' %}danger{% else %}success{% endif %}">{{ user.status }}</span></td>
+                            <td>{{ user.last_login }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-secondary">View Permissions</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+    </div>
+{% endblock %}
