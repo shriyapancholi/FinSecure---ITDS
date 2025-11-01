@@ -1,0 +1,44 @@
+[
+  {
+    "timestamp": "2025-10-25T09:30:00",
+    "user_id": "u101",
+    "role": "analyst",
+    "action": "login",
+    "resource": "/dashboard",
+    "ip": "192.168.1.24",
+    "status": "success",
+    "cpu_usage": 14.5,
+    "mem_usage": 48.2,
+    "transaction_amount": 0,
+    "session_id": "7a6c1d12-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "event_id": "d2e4b6f0-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  },
+  {
+    "timestamp": "2025-10-25T09:45:00",
+    "user_id": "u101",
+    "role": "developer",
+    "action": "transfer",
+    "resource": "/transfer",
+    "ip": "192.168.1.24",
+    "status": "success",
+    "cpu_usage": 18.3,
+    "mem_usage": 52.1,
+    "transaction_amount": 3000,
+    "session_id": "9b3f2e88-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "event_id": "a91c3b37-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  },
+  {
+    "timestamp": "2025-10-25T10:00:00",
+    "user_id": "u102",
+    "role": "operator",
+    "action": "failed_login",
+    "resource": "/accounts",
+    "ip": "192.168.3.101",
+    "status": "failed",
+    "cpu_usage": 20.4,
+    "mem_usage": 60.0,
+    "transaction_amount": 0,
+    "session_id": "c3a7f9b1-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "event_id": "f7d8c2e1-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+]
