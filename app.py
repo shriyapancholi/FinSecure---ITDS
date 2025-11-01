@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 import json
 import os
 import time
@@ -64,6 +64,12 @@ def user_management():
         {'id': 102, 'name': 'JohnS', 'role': 'Manager', 'status': 'Active', 'last_login': '2025-10-20'},
     ]
     return render_template('user_management.html', users=users)
+
+@app.route('/api/metrics', methods=['GET'])
+def api_metrics():
+    """Return live metrics data for AJAX polling"""
+    data = read_metrics()
+    return jsonify(data)
 
 # --- FINAL LAUNCH LOGIC (Includes .EXE Fix) ---
 

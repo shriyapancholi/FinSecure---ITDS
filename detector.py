@@ -6,7 +6,7 @@ import os
 # --- Configuration ---
 MONITORING_INTERVAL = 5    # Check every 5 seconds (Scheduled Check)
 METRICS_FILE = 'metrics.json' # File where the data bridge lives
-SPIKE_THRESHOLD = 90       # CPU percentage considered a "rate spike"
+SPIKE_THRESHOLD = 60       # CPU percentage considered a "rate spike"
 
 # --- CORE FUNCTIONS ---
 

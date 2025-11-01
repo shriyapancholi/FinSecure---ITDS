@@ -125,4 +125,47 @@
             </div>
         </div>
     </div>
+
+    <script>
+async function fetchMetrics() {
+    try {
+        const res = await fetch('/api/metrics');
+        const data = await res.json();
+
+        // Update CPU
+        const cpuElem = document.querySelector('.card-text.display-4.fw-bold.text-secondary, .card-text.display-4.fw-bold.text-danger');
+        if (cpuElem) cpuElem.textContent = data.cpu_usage + ' %';
+
+        // Update Memory
+        const memElem = document.querySelector('.card-text.display-4.text-secondary.fw-bold');
+        if (memElem) memElem.textContent = data.mem_usage + ' %';
+
+        // Update Integrity Status badge dynamically
+        const integrityBadge = document.querySelector('.badge.rounded-pill.shadow-sm.me-2');
+        if (data.is_spike) {
+            integrityBadge.classList.remove('bg-success');
+            integrityBadge.classList.add('bg-danger');
+            integrityBadge.innerHTML = `<i class="bi bi-x-octagon-fill me-2"></i>Integrity Status: ALERT`;
+        } else {
+            integrityBadge.classList.remove('bg-danger');
+            integrityBadge.classList.add('bg-success');
+            integrityBadge.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>Integrity Status: OK`;
+        }
+
+        // Optional: Add red alert box when spike detected
+        const alertBox = document.querySelector('.alert.alert-danger.mx-4');
+        if (alertBox) {
+            if (data.is_spike) alertBox.style.display = 'block';
+            else alertBox.style.display = 'none';
+        }
+    } catch (err) {
+        console.error('Failed to update metrics:', err);
+    }
+}
+
+// Run immediately and every 5 seconds
+fetchMetrics();
+setInterval(fetchMetrics, 5000);
+</script>
+
 {% endblock %}
