@@ -1,73 +1,112 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Security Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            background: linear-gradient(135deg, #0a192f, #172a45);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .login-container {
+            background: #112240;
+            padding: 40px 50px;
+            border-radius: 12px;
+            box-shadow: 0px 0px 20px rgba(0,0,0,0.3);
+            width: 380px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #64ffda;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #ccd6f6;
+        }
+        input {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border: none;
+            background: #0a192f;
+            color: #fff;
+        }
+        input:focus {
+            outline: 1px solid #64ffda;
+        }
+        button {
+            background: #64ffda;
+            color: #0a192f;
+            font-weight: bold;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            background: #52d6b7;
+        }
+        p {
+            text-align: center;
+            margin-top: 10px;
+        }
+        a {
+            color: #64ffda;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .flash, .error {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Welcome Back</h2>
 
-{% block title %}Sentinel OS: Secure Access{% endblock %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
 
-{% block content %}
-    <div class="row g-0 full-height-content">
-        
-        <!-- LEFT COLUMN: Filled with formal text, replacing the image box -->
-        <div class="col-lg-7 d-none d-lg-flex login-fill-section">
-            <div class="container text-start pt-5 my-auto">
-                
-                <h1 class="display-3 fw-bolder mb-3" style="font-family: 'Roboto', sans-serif; line-height: 1.1;">
-                    <i class="bi bi-shield-lock-fill me-3"></i> SENTINEL OS:
-                </h1>
-                <h1 class="display-5 fw-bold mb-5 ps-5" style="color: #A1887F;">
-                    FinTech Threat Matrix Console
-                </h1>
-                
-                <div class="ps-5 ms-4 border-start border-5 border-danger">
-                    <p class="lead mb-4 fw-normal">
-                        This system is deployed to ensure **zero-trust compliance** and **real-time insider threat mitigation** across critical financial data layers.
-                    </p>
-                    <p class="text-muted fst-italic mb-1">
-                        Access requires Level 4+ security clearance. All activity is logged and scored by ML anomaly models.
-                    </p>
-                    <p class="text-muted fst-italic">
-                        *Unauthorized attempts will trigger automated response protocols.*
-                    </p>
-                </div>
-            </div>
-        </div>
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
 
-        <!-- RIGHT COLUMN: LOGIN FORM -->
-        <div class="col-lg-5 d-flex justify-content-center align-items-center" style="background-color: var(--bs-app-bg);">
-            <div class="card shadow-xl border-0" style="width: 28rem;"> 
-                
-                <div class="card-header text-center p-4 gradient-header"> 
-                    <h4 class="mb-1 fw-bold">Hello, Security Personnel!</h4>
-                    <p class="small mb-0 fst-italic">— System Access Control —</p>
-                </div>
-                
-                <div class="card-body p-5">
-                    
-                    <p class="text-center text-muted small mb-4">
-                        <i class="bi bi-person-badge me-1"></i> Authentication via Role-Based Access Control (RBAC).
-                    </p>
+        <form action="/login" method="POST">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
 
-                    <form method="POST" action="/login">
-                        <div class="mb-3">
-                            <label for="username" class="form-label fw-bold" style="color: var(--bs-primary-dark-text);">
-                                <i class="bi bi-person-fill me-2"></i>User ID / Security Key
-                            </label>
-                            <input type="text" class="form-control form-control-lg" id="username" name="username" required>
-                        </div>
-                        <div class="mb-4">
-                            <label for="password" class="form-label fw-bold" style="color: var(--bs-primary-dark-text);">
-                                <i class="bi bi-key-fill me-2"></i>Encryption Passcode
-                            </label>
-                            <input type="password" class="form-control form-control-lg" id="password" name="password" required>
-                        </div>
-                        <!-- Custom Dark Brown Button -->
-                        <button type="submit" class="btn btn-custom-dark btn-lg w-100 fw-bold mt-3">Log In to Threat Matrix</button>
-                    </form>
-                </div>
-                
-                <div class="card-footer text-center bg-light p-3">
-                    <p class="small text-muted mb-0">System status: Secure. Monitoring established.</p>
-                </div>
-                
-            </div>
-        </div>
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+
+            <button type="submit">Login</button>
+        </form>
+
+        <p>New here? <a href="/signup">Create an account</a></p>
     </div>
-{% endblock %}
+</body>
+</html>
