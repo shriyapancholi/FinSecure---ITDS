@@ -1,5 +1,5 @@
 # app/models.py
-from datetime import datetime
+from datetime import datetime, date
 import json
 from sqlalchemy import (
     Column,
@@ -10,7 +10,7 @@ from sqlalchemy import (
     Date,
     ForeignKey,
     Text,
-    Float,        # ✅ Must be capital F
+    Float,
     text,
     Index,
 )
@@ -26,16 +26,13 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(64), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-
+    password_hash = Column(String(255), nullable=False)   # standardized name
     role = Column(Enum(*ROLE_VALUES, name="role_enum"), nullable=False)
-
     status = Column(
         Enum(*STATUS_VALUES, name="status_enum"),
         nullable=False,
         server_default=text("'active'"),
     )
-
     created_at = Column(
         DateTime(timezone=False),
         nullable=False,
@@ -43,6 +40,7 @@ class User(Base):
     )
 
     logs = relationship("Log", back_populates="user", cascade="all, delete-orphan")
+    anomalies = relationship("Anomaly", back_populates="user", cascade="all, delete-orphan")
 
 
 class Log(Base):
@@ -51,7 +49,9 @@ class Log(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     action = Column(String(255), nullable=False)
+    details = Column(Text, nullable=True)
     timestamp = Column(DateTime(timezone=False), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
+    prev_hash = Column(String(64), nullable=True)
     hash = Column(String(64), nullable=False, index=True)
 
     user = relationship("User", back_populates="logs")
@@ -66,42 +66,40 @@ class LogIntegrity(Base):
     verified_at = Column(DateTime(timezone=False), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
 
 
-class ResponseModel(Base):
-    """
-    Rule-engine responses / automated actions table.
-    Stored as JSON-text in `details` for compatibility.
-    """
+class Response(Base):
     __tablename__ = "responses"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String(128), nullable=False, index=True)
-    rule = Column(String(128), nullable=False, index=True)
-    severity = Column(String(32), nullable=False, index=True)
-    timestamp = Column(DateTime(timezone=False), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
+    anomaly_id = Column(Integer, ForeignKey("anomalies.id"), nullable=True, index=True)
+    action_taken = Column(String(255), nullable=False)
+    target_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     details = Column(Text, nullable=True)
+    timestamp = Column(DateTime(timezone=False), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
 
-    def to_dict(self):
-        try:
-            details = json.loads(self.details) if self.details else {}
-        except Exception:
-            details = {"raw": self.details}
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "rule": self.rule,
-            "severity": self.severity,
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
-            "details": details,
-        }
-    
+
 class Anomaly(Base):
     __tablename__ = "anomalies"
+
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String(128), nullable=False, index=True)
-    score = Column(Float, nullable=False)                # ✅ Must be Float, not float
-    severity = Column(String(32), nullable=False)
-    features = Column(Text)
+    source = Column(String(64), nullable=True)            # e.g. "daemon", "financial_engine", "ml_model"
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    score = Column(Float, nullable=True)                  # ML score if available
+    severity = Column(String(32), nullable=False, server_default=text("'medium'"))
+    details = Column(Text, nullable=True)                 # human readable details
+    metric_json = Column(Text, nullable=True)             # raw JSON of metrics
+    timestamp = Column(DateTime(timezone=False), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
+
+    user = relationship("User", back_populates="anomalies")
+
+
+class SystemMetric(Base):
+    __tablename__ = "system_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cpu = Column(Float, nullable=False)
+    memory = Column(Float, nullable=False)
     timestamp = Column(DateTime(timezone=False), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
 
 
+# Useful index for querying logs by user + time
 Index("ix_logs_user_timestamp", Log.user_id, Log.timestamp)
