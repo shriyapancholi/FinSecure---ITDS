@@ -1,0 +1,29 @@
+[
+    {
+        "source": "manual-test",
+        "severity": "high",
+        "metric": {
+            "cpu_usage": 95,
+            "mem_usage": 80
+        },
+        "received_at": "2025-11-03 10:35:03"
+    },
+    {
+        "source": "manual-test",
+        "severity": "high",
+        "metric": {
+            "cpu_usage": 95,
+            "mem_usage": 80
+        },
+        "received_at": "2025-11-03 11:02:50"
+    },
+    {
+        "source": "manual-test",
+        "severity": "high",
+        "metric": {
+            "cpu_usage": 95,
+            "mem_usage": 80
+        },
+        "received_at": "2025-11-03 11:37:08"
+    }
+]

@@ -1,32 +1,46 @@
-{% extends "base.html" %}
-{% block content %}
-<div class="container mt-5">
-  <div class="card shadow p-4 mx-auto" style="max-width: 400px;">
-    <h2 class="text-center mb-4">Create New Account</h2>
-    <form method="POST" action="/signup">
-      <div class="mb-3">
-        <label for="username" class="form-label">Username</label>
-        <input type="text" class="form-control" name="username" id="username" required>
-      </div>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sign Up — Sentinel</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body{font-family:Poppins,Arial,sans-serif;background:linear-gradient(135deg,#0a192f,#172a45);color:#fff;display:flex;align-items:center;justify-content:center;height:100vh}
+    .login-container{background:#112240;padding:40px;border-radius:12px;width:380px;box-shadow:0 6px 18px rgba(0,0,0,.4)}
+    h2{color:#64ffda;text-align:left;margin-bottom:18px}
+    label{color:#ccd6f6;font-size:14px}
+    input{width:100%;padding:8px;margin:8px 0 14px;border-radius:6px;border:none;background:#0b1220;color:#fff}
+    button{background:#64ffda;color:#0b1220;padding:10px;border-radius:6px;border:none;font-weight:600;cursor:pointer}
+    .muted{color:#9aaad3;margin-top:12px}
+    .flash{padding:10px;border-radius:6px;margin-bottom:12px}
+    .flash.success{background:rgba(100,255,218,0.08);color:#64ffda}
+    .flash.error{background:rgba(255,100,100,0.08);color:#ff7777}
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h2>Create account</h2>
 
-      <div class="mb-3">
-        <label for="password" class="form-label">Password</label>
-        <input type="password" class="form-control" name="password" id="password" required>
-      </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
 
-      <div class="mb-3">
-        <label for="role" class="form-label">Role</label>
-        <select class="form-select" name="role" id="role">
-          <option value="analyst">Analyst</option>
-          <option value="admin">Admin</option>
-        </select>
-      </div>
+    <form method="post" action="{{ url_for('signup') }}">
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" required autofocus value="{{ request.form.get('username','') }}">
 
-      <button type="submit" class="btn btn-primary w-100">Sign Up</button>
-      <p class="text-center mt-3">
-        Already have an account? <a href="/login">Login here</a>
-      </p>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required>
+
+      <button type="submit">Sign Up</button>
     </form>
+
+    <p class="muted">Already have an account? <a href="{{ url_for('login') }}" style="color:#64ffda">Back to Login</a></p>
   </div>
-</div>
-{% endblock %}
+</body>
+</html>

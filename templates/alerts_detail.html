@@ -1,43 +1,21 @@
-{% extends 'base.html' %}
-
-{% block title %}Alert Responses - Sentinel OS{% endblock %}
-
-{% block content %}
-    <div class="container py-4">
-        <h2 class="fw-bold mb-4" style="color: var(--bs-primary-dark-text);">
-            <i class="bi bi-bell-fill me-2"></i> Automated Response Log
-        </h2>
-        
-        <div class="card shadow-sm">
-            <div class="card-header gradient-header text-white fw-bold">
-                Detailed Log of Rule-Based and ML-Driven Responses (Source: Person C's Engine)
-            </div>
-            <div class="card-body bg-light">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>User ID</th>
-                            <th>Action Taken</th>
-                            <th>Trigger Reason</th>
-                            <th>Severity</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Loop through the placeholder data passed from app.py -->
-                        {% for alert in alerts %}
-                        <tr>
-                            <td>{{ alert.time }}</td>
-                            <td>{{ alert.user }}</td>
-                            <td><span class="badge bg-{% if alert.status == 'DANGER' %}danger{% elif alert.status == 'WARNING' %}warning{% else %}info{% endif %}">{{ alert.action }}</span></td>
-                            <td>{{ alert.reason }}</td>
-                            <td>{{ alert.status }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-    </div>
-{% endblock %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Alerts</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>Alerts Log</h1>
+    {% for alert in alerts %}
+      <div class="alert">
+        <pre>{{ alert | tojson(indent=2) }}</pre>
+      </div>
+    {% else %}
+      <p>No alerts yet.</p>
+    {% endfor %}
+    <p><a href="/dashboard">← Back to Dashboard</a></p>
+  </div>
+</body>
+</html>

@@ -1,10 +1,9 @@
-# threat_detection/anomalies_model.py
 from sqlalchemy import Column, Integer, String, DateTime, Float, JSON, text
 from datetime import datetime
 from app.database import Base
 
 class Anomaly(Base):
-    __tablename__ = "anomalies"
+    _tablename_ = "anomalies"
 
     id = Column(Integer, primary_key=True, index=True)
     # keep user id flexible (string)
