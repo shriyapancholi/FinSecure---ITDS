@@ -70,5 +70,95 @@
         },
         "created_at": "2025-11-04 11:21:43",
         "received_at": "2025-11-04 11:21:43"
+    },
+    {
+        "type": "auto_lockout",
+        "username": "shriyapancholii",
+        "ip": "127.0.0.1",
+        "severity": "high",
+        "details": {
+            "reason": "failed_login_threshold",
+            "username": "shriyapancholii",
+            "ip": "127.0.0.1",
+            "failed_count": 5,
+            "window_minutes": 15
+        },
+        "created_at": "2025-11-04 16:22:33",
+        "received_at": "2025-11-04 16:22:33"
+    },
+    {
+        "type": "auth_warning_medium",
+        "username": "shriyapancholii_admin",
+        "ip": "127.0.0.1",
+        "severity": "medium",
+        "details": {
+            "reason": "consecutive_failed_logins",
+            "username": "shriyapancholii_admin",
+            "ip": "127.0.0.1",
+            "failed_count": 3,
+            "window_minutes": 15
+        },
+        "created_at": "2025-11-04 16:57:43",
+        "received_at": "2025-11-04 16:57:43"
+    },
+    {
+        "type": "auth_warning_medium",
+        "username": "shriyapancholii_admin",
+        "ip": "127.0.0.1",
+        "severity": "medium",
+        "details": {
+            "reason": "consecutive_failed_logins",
+            "username": "shriyapancholii_admin",
+            "ip": "127.0.0.1",
+            "failed_count": 4,
+            "window_minutes": 15
+        },
+        "created_at": "2025-11-04 16:57:45",
+        "received_at": "2025-11-04 16:57:45"
+    },
+    {
+        "type": "auto_lockout",
+        "username": "scammer",
+        "ip": "127.0.0.1",
+        "severity": "high",
+        "details": {
+            "reason": "failed_login_threshold",
+            "username": "scammer",
+            "ip": "127.0.0.1",
+            "failed_count": 5,
+            "window_minutes": 15
+        },
+        "created_at": "2025-11-04 16:58:47",
+        "received_at": "2025-11-04 16:58:47"
+    },
+    {
+        "type": "auth_warning_medium",
+        "username": "shriyapancholii_admin",
+        "ip": "127.0.0.1",
+        "severity": "medium",
+        "details": {
+            "reason": "consecutive_failed_logins",
+            "username": "shriyapancholii_admin",
+            "ip": "127.0.0.1",
+            "failed_count": 4,
+            "window_minutes": 15
+        },
+        "created_at": "2025-11-04 17:04:49",
+        "received_at": "2025-11-04 17:04:49"
+    },
+    {
+        "type": "auth_warning_low",
+        "username": "shriyapancholii_admin",
+        "ip": "127.0.0.1",
+        "severity": "low",
+        "details": {
+            "reason": "consecutive_failed_logins",
+            "username": "shriyapancholii_admin",
+            "ip": "127.0.0.1",
+            "failed_count": 2,
+            "window_minutes": 15
+        },
+        "created_at": "2025-11-04 17:15:52",
+        "received_at": "2025-11-04 17:15:52"
     }
 ]

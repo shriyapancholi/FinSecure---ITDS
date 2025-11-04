@@ -160,6 +160,23 @@
     <!-- Left: donut -->
     <div>
       <div class="card-panel" style="padding:28px;">
+
+        <!-- NEW: Percent legend above donut -->
+        <div style="text-align:center; margin:0 0 10px; display:flex; justify-content:center; gap:18px;">
+          <div class="mutd">
+            <span class="sw" style="background:var(--danger)"></span>
+            High: <strong id="pct_high">0%</strong>
+          </div>
+          <div class="mutd">
+            <span class="sw" style="background:var(--warning)"></span>
+            Medium: <strong id="pct_medium">0%</strong>
+          </div>
+          <div class="mutd">
+            <span class="sw" style="background:var(--success)"></span>
+            Low: <strong id="pct_low">0%</strong>
+          </div>
+        </div>
+
         <div style="display:flex;justify-content:center;">
           <div class="donut-wrap">
             <svg class="donut" viewBox="0 0 42 42" aria-hidden="true">
@@ -229,7 +246,9 @@
         updateDonut([]); updateSummaryCounts([]); return;
       }
       renderAnomalies(j.anomalies);
-      updateSummaryCounts(j.anomalies);
+      updateSummaryCounts(j.anomalies); 
+      const sev = document.getElementById('filter_severity').value || '';
+      updateDonut(j.anomalies, sev);;
     }catch(err){ console.error('anomalies fetch', err); }
   }
 
@@ -243,22 +262,69 @@
     document.getElementById('anomalies_24h').textContent = last24;
   }
 
-  function updateDonut(list){
-    const c = {high:0, medium:0, low:0};
-    list.forEach(a=>{
-      const s=(a.severity||'').toLowerCase();
-      if(s==='high') c.high++; else if(s==='medium') c.medium++; else if(s==='low') c.low++;
-    });
-    const total = Math.max(1, c.high + c.medium + c.low);
-    const pH = Math.round(c.high/total*100), pM = Math.round(c.medium/total*100), pL = Math.max(0, 100-pH-pM);
+function updateDonut(list, activeFilter = ''){
+  const c = { high:0, medium:0, low:0 };
+  (list || []).forEach(a=>{
+    const s=(a.severity||'').toLowerCase();
+    if(s==='high') c.high++;
+    else if(s==='medium') c.medium++;
+    else if(s==='low') c.low++;
+  });
 
-    document.getElementById('seg-high').setAttribute('stroke-dasharray', `${pH} ${100-pH}`);
-    document.getElementById('seg-med').setAttribute('stroke-dasharray',  `${pM} ${100-pM}`);
-    document.getElementById('seg-low').setAttribute('stroke-dasharray',  `${pL} ${100-pL}`);
+  const total = c.high + c.medium + c.low;
 
-    let primary = pH>=pM && pH>=pL ? pH : (pM>=pH && pM>=pL ? pM : pL);
-    document.getElementById('donut-label').textContent = `${primary}%`;
+  const segH = document.getElementById('seg-high');
+  const segM = document.getElementById('seg-med');
+  const segL = document.getElementById('seg-low');
+  const label = document.getElementById('donut-label');
+
+  // helper to update the % legend above donut
+  const setLegend = (h,m,l) => {
+    const ph = document.getElementById('pct_high');
+    const pm = document.getElementById('pct_medium');
+    const pl = document.getElementById('pct_low');
+    if (ph) ph.textContent = `${h}%`;
+    if (pm) pm.textContent = `${m}%`;
+    if (pl) pl.textContent = `${l}%`;
+  };
+
+  if(total === 0){
+    segH.setAttribute('stroke-dasharray','0 100'); segH.setAttribute('stroke-dashoffset','25');
+    segM.setAttribute('stroke-dasharray','0 100'); segM.setAttribute('stroke-dashoffset','25');
+    segL.setAttribute('stroke-dasharray','0 100'); segL.setAttribute('stroke-dashoffset','25');
+    setLegend(0,0,0);
+    label.textContent = '0%';
+    return;
   }
+
+  const pH = Math.round((c.high/total)*100);
+  const pM = Math.round((c.medium/total)*100);
+  const pL = Math.max(0, 100 - pH - pM);  // keep sum == 100
+
+  // paint as a continuous ring
+  let start = 25;
+  segH.setAttribute('stroke-dasharray', `${pH} ${100-pH}`);
+  segH.setAttribute('stroke-dashoffset', `${start}`);
+
+  start -= pH;
+  segM.setAttribute('stroke-dasharray', `${pM} ${100-pM}`);
+  segM.setAttribute('stroke-dashoffset', `${start}`);
+
+  start -= pM;
+  segL.setAttribute('stroke-dasharray', `${pL} ${100-pL}`);
+  segL.setAttribute('stroke-dashoffset', `${start}`);
+
+  // update legend
+  setLegend(pH, pM, pL);
+
+  // center label
+  if(!activeFilter){             // All
+    label.textContent = '100%';
+  } else {
+    const map = {high:pH, medium:pM, low:pL};
+    label.textContent = `${map[activeFilter] ?? 0}%`;
+  }
+}
 
   async function renderAnomalies(list){
     const box = document.getElementById('anomalies_list');
