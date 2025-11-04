@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+  sentinel:
+    build: .
+    container_name: sentinel-app
+    # map external port 5050 -> container 5000
+    ports:
+      - "5050:5000"
+    environment:
+      # production flags (set SENTINEL_SECRET_KEY in your environment or .env for real prod)
+      - FLASK_ENV=production
+      - SENTINEL_SECRET_KEY=${SENTINEL_SECRET_KEY:-super-long-secret}
+      - RATELIMIT_STORAGE_URI=${RATELIMIT_STORAGE_URI:-redis://redis:6379/0}
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      # require redis service to be healthy before starting app
+      - redis
+    # ensure service restarts on failures
+    restart: unless-stopped
+    # run Gunicorn pointing explicitly at wsgi:app (ensures correct import)
+    # use 4 workers — adjust to your CPU core count for production
+    command: >
+      gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: sentinel-redis
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  redis_data:

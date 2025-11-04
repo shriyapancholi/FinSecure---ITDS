@@ -1,113 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>{% block title %}Sentinel OS{% endblock %}</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <!-- Bootstrap (stable) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons (stable) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
     <style>
-        :root {
-            --bg-dark: #0a192f;
-            --accent: #64ffda;
-            --text-light: #ccd6f6;
+        /* ===== Theme tokens (Light) ===== */
+        :root{
+            --bg-900: #f5efe6;            /* page bg light */
+            --accent: #7b2f2f;            /* brand/accent */
+            --accent-700: #5a1f1f;
+            --muted: #6b5858;             /* muted text */
+            --card-bg: rgba(255,255,255,0.88);
+            --glass: rgba(255,255,255,0.85);
+            --danger: #e35b5b;
+            --warning: #d19b4a;
+            --success: #2c8c69;
+            --text-dark: #2b2b2b;
+            --shadow: 0 12px 30px rgba(24,24,24,0.08);
         }
-        body {
-            background-color: var(--bg-dark);
-            color: var(--text-light);
-            font-family: "Poppins", sans-serif;
-            margin: 0;
+
+        html,body{height:100%}
+        body{
+            margin:0;
+            min-height:100%;
+            font-family:"Inter","Poppins",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+            background:
+              radial-gradient(900px 300px at 10% 12%, rgba(180,170,155,0.06), transparent 6%),
+              linear-gradient(180deg, #f5efe6 0%, #efe6d8 40%, #e8e1d3 100%);
+            color: var(--text-dark);
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+            padding-bottom:48px;
         }
-        .navbar {
-            background-color: #112240;
-            padding: 0.8rem 1.2rem;
+
+        /* ===== Navbar ===== */
+        .navbar { background: transparent; border-bottom: 0; padding: .6rem 1.25rem; }
+        .navbar-brand{
+            color: var(--accent) !important; font-weight: 800; letter-spacing:-0.02em; font-size:1.15rem;
         }
-        .navbar-brand {
-            color: var(--accent) !important;
-            font-weight: 600;
+        .nav-link{
+            color: var(--muted) !important; padding:.35rem .6rem; transition: color .18s ease, transform .12s ease; font-weight:600;
         }
-        .nav-link {
-            color: #8892b0 !important;
-            transition: 0.3s;
+        .nav-link:hover{ color: var(--accent) !important; transform: translateY(-1px); }
+
+        .navbar .user-pill{ color:var(--text-dark); font-weight:600; font-size:0.95rem; display:inline-flex; gap:.6rem; align-items:center; }
+
+        /* Buttons */
+        .btn-accent{ background: var(--accent); color:#fff; border:none; font-weight:700; box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
+        .btn-accent:hover{ background: var(--accent-700); color:#fff; }
+        .btn-outline-light{ border-color: rgba(0,0,0,0.06); color: var(--text-dark); background: transparent; }
+
+        /* Page container */
+        .content{ max-width:1100px; margin:28px auto; padding:28px; }
+
+        /* Utility card */
+        .card-panel{
+            background: var(--card-bg); border-radius:14px; padding:18px; box-shadow: var(--shadow);
+            border:1px solid rgba(0,0,0,0.04);
         }
-        .nav-link:hover {
-            color: var(--accent) !important;
+
+        /* Text */
+        h1, h2, h3 { color: var(--text-dark); margin:0 0 .6rem 0; }
+        .muted { color: var(--muted); }
+
+        /* Inputs */
+        input.form-control, textarea.form-control, select.form-select{
+            background:#fff; border:1px solid rgba(0,0,0,0.08); color:var(--text-dark); border-radius:8px;
         }
-        .btn-accent {
-            background-color: var(--accent);
-            color: #0a192f;
-            font-weight: 600;
-            border: none;
+        input::placeholder{ color: rgba(100,100,100,0.45); }
+        .form-label.muted { color: var(--muted); font-weight:600; }
+
+        /* In-content panels */
+        .panel{
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.95));
+            border-radius:14px; padding:18px; border:1px solid rgba(0,0,0,0.04);
         }
-        .btn-accent:hover {
-            background-color: #52d6b7;
+
+        /* Badges */
+        .badge-sev-high{ background:var(--danger); color:#fff; font-weight:700; padding:.38rem .6rem; border-radius:10px; }
+        .badge-sev-med { background:var(--warning); color:#fff; font-weight:700; padding:.35rem .6rem; border-radius:10px; }
+        .badge-sev-low { background:var(--success); color:#fff; font-weight:700; padding:.35rem .6rem; border-radius:10px; }
+
+        /* Code blocks (used in alerts page) */
+        pre.json{
+            background:#07262b; padding:14px; border-radius:10px; color:#bfeee0; border:1px solid rgba(0,0,0,0.03); overflow-x:auto;
         }
-        .content {
-            padding: 2rem;
+
+        /* Scrollbar */
+        ::-webkit-scrollbar{height:10px;width:12px}
+        ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.06);border-radius:8px;border:3px solid transparent;background-clip:padding-box}
+
+        /* Responsive */
+        @media (max-width:880px){
+            .content{ padding:18px; margin:12px; }
+            .navbar-brand{ font-size:1.05rem; }
         }
+
+        /* Auth page helpers */
+        .card-panel.auth{ max-width:520px; margin:48px auto; padding:28px 32px; border-radius:14px; }
+        .small-footer{ text-align:center; color:var(--muted); margin-top:18px; }
+        .resume-btn{ background:transparent; border:1px solid rgba(0,0,0,0.06); color:var(--accent); padding:6px 10px; border-radius:8px; }
+
+        /* Icons */
+        .bi{ color: var(--accent); vertical-align: -2px; }
+        .input-group-text{ background:transparent; border:none; padding-left:0; color:rgba(0,0,0,0.55); }
+
+        /* ===== Dark Theme Overrides (Global) ===== */
+        body.theme-dark{
+            --bg-900:#0f1115;
+            --text-dark:#e8e8e8;
+            --muted:#a7b0b8;
+            --card-bg: rgba(23,25,30,0.94);
+            --glass: rgba(20,22,26,0.70);
+            --accent:#d4685e;
+            --accent-700:#b15449;
+            --danger:#ff7a7a;
+            --warning:#ffc062;
+            --success:#73d0a3;
+            --shadow:0 12px 30px rgba(0,0,0,0.6);
+
+            background:
+              radial-gradient(900px 300px at 12% 10%, rgba(255,255,255,0.04), transparent 6%),
+              linear-gradient(180deg, #131820 0%, #11171f 40%, #0f141b 100%);
+            color:var(--text-dark);
+        }
+        body.theme-dark input.form-control,
+        body.theme-dark textarea.form-control,
+        body.theme-dark select.form-select{
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.16);
+            color: var(--text-dark);
+        }
+        body.theme-dark .btn-outline-light{
+            border-color: rgba(255,255,255,0.18);
+            color: var(--text-dark);
+        }
+        body.theme-dark .navbar{ box-shadow: 0 4px 18px rgba(0,0,0,0.45); }
+        body.theme-dark .bi{ color: var(--accent); }
+        body.theme-dark .card-panel{ border-color: rgba(255,255,255,0.08); }
+        body.theme-dark .resume-btn{ border-color: rgba(255,255,255,0.18); }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg shadow-sm">
+{% set hide_nav_endpoints = ['login', 'signup'] %}
+{% if request.endpoint not in hide_nav_endpoints %}
+<nav class="navbar navbar-expand-lg">
     <div class="container-fluid">
         <a class="navbar-brand" href="{{ url_for('dashboard') }}">
-            <i class="bi bi-shield-shaded me-2"></i> Sentinel OS
+            <i class="bi bi-shield-shaded me-2"></i> Sentinel
         </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                data-bs-target="#navbarNav" aria-controls="navbarNav"
-                aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
 
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 {% if session.get('logged_in') %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('alerts_detail') }}">Alerts</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('alerts_detail') }}">Alerts</a></li>
                     {% if session.get('role') == 'admin' %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('user_management') }}">User Management</a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('user_management') }}">User Management</a></li>
                     {% endif %}
                 {% endif %}
             </ul>
 
-            <div class="d-flex">
+            <div class="d-flex align-items-center">
                 {% if session.get('logged_in') %}
-                    <span class="me-3">
-                        <i class="bi bi-person-circle"></i>
-                        {{ session.get('username', 'User') }} 
-                        ({{ session.get('role', 'analyst')|capitalize }})
-                    </span>
-                    <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-light">Logout</a>
+                <div class="user-pill me-3">
+                    <i class="bi bi-person-circle" style="font-size:1.15rem"></i>
+                    <span style="opacity:.95;margin-left:.35rem">{{ session.get('username','User') }}</span>
+                    <small class="muted" style="margin-left:.45rem">{{ session.get('role','analyst')|capitalize }}</small>
+                    {% if session.get('suspended') %}
+                    <span class="badge bg-danger ms-2" style="font-weight:700;padding:.25rem .5rem;">Suspended</span>
+                    {% endif %}
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-light">Logout</a>
                 {% else %}
-                    <a href="{{ url_for('login') }}" class="btn btn-sm btn-accent me-2">Login</a>
-                    <a href="{{ url_for('signup') }}" class="btn btn-sm btn-outline-light">Sign Up</a>
+                <a href="{{ url_for('login') }}" class="btn btn-sm btn-accent me-2">Login</a>
+                <a href="{{ url_for('signup') }}" class="btn btn-sm btn-outline-light">Sign Up</a>
                 {% endif %}
             </div>
         </div>
     </div>
 </nav>
+{% endif %}
 
 <div class="content">
     {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
+      {% if messages %}
         {% for category, message in messages %}
-            <div class="alert alert-info">{{ message }}</div>
+          <div class="alert alert-info">{{ message }}</div>
         {% endfor %}
-    {% endif %}
+      {% endif %}
     {% endwith %}
 
     {% block content %}{% endblock %}
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-

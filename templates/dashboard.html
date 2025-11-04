@@ -1,14 +1,327 @@
-<!doctype html>
-<html><head><meta charset="utf-8"><title>Dashboard</title>
-<link rel="stylesheet" href="/static/style.css"></head>
-<body>
-  <div class="container">
-    <h1>Sentinel OS Dashboard</h1>
-    <div id="metrics">
-      <p>CPU: {{ metrics.cpu_usage }}</p>
-      <p>Memory: {{ metrics.mem_usage }}</p>
-      <p>Spike: {{ metrics.is_spike }}</p>
+{% extends 'base.html' %}
+
+{% block title %}Sentinel — Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  /* ===== Dashboard-specific styles (use base.html tokens) ===== */
+  .dash-header{display:flex;align-items:center;gap:18px;margin-bottom:22px}
+  .dash-brand{font-size:28px;font-weight:700;color:var(--accent)}
+  .dash-subtitle{color:var(--muted);font-weight:600}
+
+  .dash-row{display:flex;gap:18px;margin-bottom:18px;align-items:stretch}
+  .dash-card{background:var(--card-bg);border-radius:14px;box-shadow:var(--shadow);padding:18px;flex:1;min-height:110px;border:1px solid rgba(0,0,0,0.04)}
+  .dash-card.sm{flex:0 0 260px}
+  .lbl{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .val{font-size:20px;font-weight:700;color:var(--text-dark)}
+  .mutd{color:var(--muted)}
+
+  .dash-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+  .dash-controls select,.dash-controls input{
+    padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.08);
+    background:#fff;min-width:140px;color:var(--text-dark)
+  }
+
+  .legend{display:flex;gap:12px;align-items:center}
+  .legend .item{display:flex;gap:8px;align-items:center}
+  .sw{width:12px;height:12px;border-radius:4px;display:inline-block}
+
+  .grid{display:grid;grid-template-columns:420px 1fr;gap:20px;align-items:start}
+  @media (max-width:980px){ .grid{grid-template-columns:1fr} }
+
+  .donut-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:320px}
+  .donut{width:220px;height:220px}
+
+  .list{display:flex;flex-direction:column;gap:12px;max-height:640px;overflow:auto;padding-right:6px}
+  .anom{background:var(--card-bg);border-radius:12px;padding:12px;box-shadow:0 8px 24px rgba(15,30,40,0.06);
+        border-left:6px solid transparent;position:relative;border:1px solid rgba(0,0,0,0.04)}
+  .anom .meta{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
+  .anom .ttl{font-weight:700}
+  .pill{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:700;font-size:12px;}
+  .pill.high{background:var(--danger);color:#fff}
+  .pill.med{background:var(--warning);color:#fff}
+  .pill.low{background:var(--success);color:#fff}
+  .json{background:rgba(0,0,0,0.03);padding:12px;border-radius:8px;color:var(--muted);
+        font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size:13px;white-space:pre-wrap}
+
+  /* --- Dark tweaks specific to dashboard --- */
+  body.theme-dark .json{
+    background: rgba(255,255,255,0.06);
+    color: var(--text-dark);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  body.theme-dark .dash-card,
+  body.theme-dark .anom{
+    border-color: rgba(255,255,255,0.08);
+  }
+  body.theme-dark .donut circle[stroke="#eef2f2"]{
+    stroke: rgba(255,255,255,0.12) !important;
+  }
+</style>
+
+<div class="container" style="max-width:1200px;">
+  <!-- Header -->
+  <div class="dash-header">
+    <div>
+      <div class="dash-brand">Sentinel</div>
+      <div class="dash-subtitle">Security Dashboard — Analyst View</div>
     </div>
-    <p><a href="/alerts_detail">Alerts</a></p>
+    <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+      <button id="theme_toggle" class="resume-btn">Change Mode</button>
+      <a href="{{ url_for('alerts_detail') }}" class="link" style="color:var(--accent);font-weight:600;text-decoration:none">View Alerts Log →</a>
+    </div>
   </div>
-</body></html>
+
+  <!-- Top summary -->
+  <div class="dash-row">
+    <div class="dash-card">
+      <div class="lbl">System Metrics</div>
+      <div class="val" id="m_cpu">CPU —</div>
+      <div class="mutd" id="m_mem">Memory —</div>
+      <div class="mutd" id="m_spike">Spike —</div>
+    </div>
+
+    <div class="dash-card sm">
+      <div class="lbl">Total anomalies</div>
+      <div class="val" id="total_anomalies">—</div>
+      <div class="mutd">Recent 24h: <span id="anomalies_24h">—</span></div>
+    </div>
+
+    <div class="dash-card sm">
+      <div class="lbl">Currently suspended users</div>
+      <div class="val" id="suspended_count">—</div>
+      <div class="mutd">Auto-lockouts</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="dash-controls">
+    <div>
+      <label class="mutd" style="font-size:12px">Severity</label><br/>
+      <select id="filter_severity">
+        <option value="">All</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="mutd" style="font-size:12px">User</label><br/>
+      <input id="filter_username" placeholder="username" />
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="filter_apply" class="btn btn-accent">Apply</button>
+      <button id="filter_clear" class="btn btn-outline-light">Clear</button>
+    </div>
+
+    <div class="legend" style="margin-left:8px">
+      <div class="item"><span class="sw" style="background:var(--danger)"></span> <span class="mutd">high</span></div>
+      <div class="item"><span class="sw" style="background:var(--warning)"></span> <span class="mutd">medium</span></div>
+      <div class="item"><span class="sw" style="background:var(--success)"></span> <span class="mutd">low</span></div>
+    </div>
+
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button id="export_csv" class="btn btn-accent">Export CSV</button>
+      <button id="refresh_now" class="btn btn-outline-light">Refresh</button>
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="grid">
+    <!-- Left: donut -->
+    <div>
+      <div class="card-panel" style="padding:28px;">
+        <div style="display:flex;justify-content:center;">
+          <div class="donut-wrap">
+            <svg class="donut" viewBox="0 0 42 42" aria-hidden="true">
+              <circle cx="21" cy="21" r="15.91549431" fill="transparent" stroke="#eef2f2" stroke-width="6"></circle>
+              <circle id="seg-high" cx="21" cy="21" r="15.91549431" fill="transparent" stroke="var(--danger)"  stroke-width="6" stroke-dasharray="0 100" stroke-dashoffset="25"></circle>
+              <circle id="seg-med"  cx="21" cy="21" r="15.91549431" fill="transparent" stroke="var(--warning)" stroke-width="6" stroke-dasharray="0 100" stroke-dashoffset="25"></circle>
+              <circle id="seg-low"  cx="21" cy="21" r="15.91549431" fill="transparent" stroke="var(--success)" stroke-width="6" stroke-dasharray="0 100" stroke-dashoffset="25"></circle>
+              <g transform="translate(21,21)">
+                <text id="donut-label" text-anchor="middle" dy="4" style="font-size:6px;fill:var(--text-dark);font-weight:700"></text>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:8px;color:var(--muted)">Alert distribution (primary severity)</div>
+      </div>
+    </div>
+
+    <!-- Right: anomalies -->
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="margin:0">Recent anomalies</h3>
+        <div class="mutd">Showing most recent — <a href="{{ url_for('alerts_detail') }}" style="color:var(--accent);text-decoration:none;font-weight:600">full log</a></div>
+      </div>
+
+      <div id="anomalies_list" class="list"><!-- injected by JS --></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------- helpers ----------
+  const POLL_MS = 10000;
+  function prettyJSON(obj){ try{return JSON.stringify(obj,null,2)}catch(e){return String(obj)} }
+  function severityInfo(s){
+    s = (s||'').toLowerCase();
+    if(s==='high')   return {cls:'high',  color:getComputedStyle(document.documentElement).getPropertyValue('--danger')  || '#e35b5b', text:'HIGH'};
+    if(s==='medium') return {cls:'med',   color:getComputedStyle(document.documentElement).getPropertyValue('--warning') || '#d19b4a', text:'MED'};
+    if(s==='low')    return {cls:'low',   color:getComputedStyle(document.documentElement).getPropertyValue('--success') || '#2c8c69', text:'LOW'};
+    return {cls:'', color:'#cbd5e1', text:(s||'—').toUpperCase()};
+  }
+
+  // ---------- metrics ----------
+  async function fetchMetrics(){
+    try{
+      const r = await fetch('/api/metrics'); const j = await r.json(); if(!j) return;
+      document.getElementById('m_cpu').textContent   = `CPU: ${j.cpu_usage ?? '—'}`;
+      document.getElementById('m_mem').textContent   = `Memory: ${j.mem_usage ?? '—'}`;
+      document.getElementById('m_spike').textContent = `Spike: ${j.is_spike ?? false}`;
+      if(j.suspended_count !== undefined) document.getElementById('suspended_count').textContent = j.suspended_count;
+    }catch(e){ console.warn('metrics err', e); }
+  }
+
+  // ---------- anomalies ----------
+  async function fetchAnomalies(){
+    const sev  = document.getElementById('filter_severity').value;
+    const user = document.getElementById('filter_username').value.trim();
+    const qp = new URLSearchParams();
+    if(sev)  qp.set('severity', sev);
+    if(user) qp.set('username', user);
+    qp.set('limit', 200);
+
+    try{
+      const r = await fetch('/api/anomalies?' + qp.toString());
+      const j = await r.json();
+      if(!j || !j.anomalies){
+        document.getElementById('anomalies_list').innerHTML = '<div class="mutd">No anomalies</div>';
+        updateDonut([]); updateSummaryCounts([]); return;
+      }
+      renderAnomalies(j.anomalies);
+      updateSummaryCounts(j.anomalies);
+    }catch(err){ console.error('anomalies fetch', err); }
+  }
+
+  function updateSummaryCounts(list){
+    document.getElementById('total_anomalies').textContent = list.length || 0;
+    const now = Date.now();
+    const last24 = list.filter(a => {
+      const dt = Date.parse(a.created_at || '');
+      return !isNaN(dt) && (now - dt) <= 24*3600*1000;
+    }).length;
+    document.getElementById('anomalies_24h').textContent = last24;
+  }
+
+  function updateDonut(list){
+    const c = {high:0, medium:0, low:0};
+    list.forEach(a=>{
+      const s=(a.severity||'').toLowerCase();
+      if(s==='high') c.high++; else if(s==='medium') c.medium++; else if(s==='low') c.low++;
+    });
+    const total = Math.max(1, c.high + c.medium + c.low);
+    const pH = Math.round(c.high/total*100), pM = Math.round(c.medium/total*100), pL = Math.max(0, 100-pH-pM);
+
+    document.getElementById('seg-high').setAttribute('stroke-dasharray', `${pH} ${100-pH}`);
+    document.getElementById('seg-med').setAttribute('stroke-dasharray',  `${pM} ${100-pM}`);
+    document.getElementById('seg-low').setAttribute('stroke-dasharray',  `${pL} ${100-pL}`);
+
+    let primary = pH>=pM && pH>=pL ? pH : (pM>=pH && pM>=pL ? pM : pL);
+    document.getElementById('donut-label').textContent = `${primary}%`;
+  }
+
+  function renderAnomalies(list){
+    const box = document.getElementById('anomalies_list');
+    box.innerHTML = '';
+    if(!list.length){ box.innerHTML = '<div class="mutd">No anomalies found</div>'; updateDonut([]); return; }
+    updateDonut(list);
+
+    list.forEach(a=>{
+      const si = severityInfo(a.severity);
+      const el = document.createElement('div');
+      el.className = 'anom';
+      el.style.borderLeftColor = si.color;
+
+      const username = a.user_id || (a.details && a.details.username) || 'unknown';
+      const created  = a.created_at || '-';
+      const score    = a.score ?? '-';
+
+      el.innerHTML = `
+        <div class="meta">
+          <div>
+            <div class="ttl">ID: ${a.id} <span class="pill ${si.cls}" style="margin-left:8px">${si.text}</span></div>
+            <div class="mutd" style="font-size:13px">Score: ${score}</div>
+          </div>
+          <div class="mutd" style="text-align:right;min-width:180px">
+            <div style="font-weight:600">${username}</div>
+            <div style="font-size:13px">${created}</div>
+          </div>
+        </div>
+        <pre class="json">${prettyJSON(a.details)}</pre>
+        <div style="text-align:right;margin-top:8px">
+          <button class="resume-btn" data-user="${a.user_id||''}" data-username="${(a.details && a.details.username) ? a.details.username : ''}">Resume user</button>
+        </div>
+      `;
+      box.appendChild(el);
+    });
+
+    // actions
+    box.querySelectorAll('.resume-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const userId   = btn.dataset.user || null;
+        const username = btn.dataset.username || null;
+        if(!confirm(`Resume user ${username || userId}?`)) return;
+        try{
+          const res = await fetch('/api/users/resume', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ user_id: userId, username })
+          });
+          const js = await res.json();
+          if(res.ok){ alert(js.message || 'Resumed'); fetchAnomalies(); fetchMetrics(); }
+          else { alert(js.error || 'Resume failed'); }
+        }catch(err){ alert('Error: ' + err); }
+      });
+    });
+  }
+
+  // ---------- wiring ----------
+  document.getElementById('filter_apply').addEventListener('click', fetchAnomalies);
+  document.getElementById('filter_clear').addEventListener('click', ()=>{
+    document.getElementById('filter_severity').value='';
+    document.getElementById('filter_username').value='';
+    fetchAnomalies();
+  });
+  document.getElementById('refresh_now').addEventListener('click', ()=>{ fetchMetrics(); fetchAnomalies(); });
+
+  document.getElementById('export_csv').addEventListener('click', ()=>{
+    const sev  = document.getElementById('filter_severity').value;
+    const user = document.getElementById('filter_username').value.trim();
+    const qp = new URLSearchParams();
+    if(sev)  qp.set('severity', sev);
+    if(user) qp.set('username', user);
+    qp.set('limit', 1000);
+    window.location = '/api/anomalies/export?' + qp.toString();
+  });
+
+  // theme toggle (persist)
+  const themeToggle = document.getElementById('theme_toggle');
+  function applyTheme(t){
+    if(t==='dark') document.body.classList.add('theme-dark');
+    else document.body.classList.remove('theme-dark');
+    localStorage.setItem('sentinel_theme', t);
+  }
+  themeToggle.addEventListener('click', ()=>{
+    const cur = localStorage.getItem('sentinel_theme') || 'light';
+    applyTheme(cur==='light' ? 'dark' : 'light');
+  });
+  (function(){ const t = localStorage.getItem('sentinel_theme') || 'light'; applyTheme(t); })();
+
+  // initial + polling
+  fetchMetrics(); fetchAnomalies();
+  setInterval(()=>{ fetchMetrics(); fetchAnomalies(); }, POLL_MS);
+</script>
+{% endblock %}

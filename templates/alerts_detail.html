@@ -1,21 +1,199 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Alerts</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-  <div class="container">
-    <h1>Alerts Log</h1>
-    {% for alert in alerts %}
-      <div class="alert">
-        <pre>{{ alert | tojson(indent=2) }}</pre>
-      </div>
-    {% else %}
-      <p>No alerts yet.</p>
-    {% endfor %}
-    <p><a href="/dashboard">← Back to Dashboard</a></p>
+{% extends 'base.html' %}
+
+{% block title %}Alerts Log — Sentinel{% endblock %}
+
+{% block content %}
+<style>
+  /* Layout + header */
+  .alerts-head h1{ color:var(--accent); margin:0 0 .25rem 0; font-weight:800; }
+  .alerts-head .sub{ color:var(--muted); font-weight:500; }
+
+  .toolbar { display:flex; gap:.5rem; align-items:center; }
+
+  /* Cards */
+  .alerts-card{
+    background:var(--card-bg);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+    border:1px solid rgba(0,0,0,0.04);
+  }
+  /* Give the first row inside the card breathing room so the title
+     doesn’t touch the rounded top border */
+  .alerts-card > .card-body{
+    padding-top: 1.15rem;   /* <-- extra space on top */
+    padding-bottom: 1rem;
+  }
+
+  .inner-card{
+    background:var(--card-bg);
+    border-radius:10px;
+    border:1px solid rgba(0,0,0,0.06);
+  }
+
+  /* Section title — softer weight, clean spacing & divider */
+  .section-title{
+    font-size:1.1rem;
+    font-weight:600;
+    color:var(--text-dark);
+    margin: .15rem 0 .9rem 0;    /* top margin keeps it away from the cap */
+    padding: 0 0 .5rem 0;
+    border-bottom:1px solid rgba(0,0,0,0.06);
+    letter-spacing:.2px;
+  }
+
+  /* JSON blocks */
+  .log-json{
+    background:#0f2730;     /* light mode */
+    color:#bfeee0;
+    padding:12px;
+    border-radius:8px;
+    white-space:pre-wrap;
+    margin:0;
+    border:1px solid rgba(0,0,0,0.06);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size:13px;
+  }
+
+  /* Dividers */
+  .soft-hr{ border-color: rgba(0,0,0,0.08); opacity:.7; }
+
+  /* --------- Dark-mode refinements (match dashboard) --------- */
+  body.theme-dark .alerts-card,
+  body.theme-dark .inner-card { border-color: rgba(255,255,255,0.12); }
+
+  body.theme-dark .section-title{
+    color: #eef3f3;
+    border-bottom-color: rgba(255,255,255,0.16);
+  }
+
+  body.theme-dark .soft-hr { border-color: rgba(255,255,255,0.15); }
+
+  body.theme-dark .log-json{
+    background: #0e1b22;
+    color: #d3f4eb;
+    border-color: rgba(255,255,255,0.10);
+  }
+</style>
+
+<div class="container py-5">
+  <div class="d-flex align-items-center justify-content-between mb-3 alerts-head">
+    <div>
+      <h1 class="h2">Alerts Log</h1>
+      <div class="sub">Recent anomalies (database) and file fallback.</div>
+    </div>
+    <div class="toolbar">
+      <button id="theme_toggle_alerts" class="resume-btn">Change Mode</button>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light">Back to Dashboard</a>
+      <a href="{{ url_for('api_anomalies_export') }}" class="btn btn-accent">Export CSV</a>
+    </div>
   </div>
-</body>
-</html>
+
+  <div class="row g-4">
+    <!-- Database anomalies -->
+    <div class="col-12">
+      <div class="alerts-card shadow-sm mb-4">
+        <div class="card-body">
+          <!-- Title case + better spacing -->
+          <div class="section-title">Recent anomalies (database)</div>
+
+          {% if alerts.db and alerts.db|length > 0 %}
+            {% for a in alerts.db %}
+              <div class="inner-card card mb-3">
+                <div class="card-body">
+                  <div class="d-flex align-items-start justify-content-between">
+                    <div class="small">
+                      <strong>ID:</strong> {{ a.id }} &nbsp;&nbsp;
+                      <strong>User:</strong> {{ a.user_id or 'unknown' }} &nbsp;&nbsp;
+                      <strong>Score:</strong> {{ a.score or 'n/a' }}
+                      <div class="muted mt-1">Created: {{ a.created_at or '-' }}</div>
+                    </div>
+
+                    <div class="text-end">
+                      {% set sev = (a.severity or 'medium')|lower %}
+                      {% if sev == 'high' %}
+                        <span class="badge bg-danger">high</span>
+                      {% elif sev == 'low' %}
+                        <span class="badge bg-success">low</span>
+                      {% else %}
+                        <span class="badge bg-warning text-dark">medium</span>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <hr class="soft-hr">
+
+                  <div class="muted small mb-2">Details</div>
+                  <pre class="log-json">{{ a.details | tojson(indent=2) }}</pre>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="alert alert-secondary mb-0">No anomalies found in the database.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- File alerts -->
+    <div class="col-12">
+      <div class="alerts-card shadow-sm">
+        <div class="card-body">
+          <div class="section-title">File alerts (alerts_log.json) — fallback / recent</div>
+
+          {% if alerts.file and alerts.file|length > 0 %}
+            {% for item in alerts.file %}
+              <div class="inner-card card mb-3">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between">
+                    <div class="small muted">
+                      <strong>Received:</strong> {{ item.received_at or item.created_at or 'unknown' }}
+                      {% if item.type %} &nbsp; • &nbsp; <strong>Type:</strong> {{ item.type }}{% endif %}
+                      {% if item.username %} &nbsp; • &nbsp; <strong>User:</strong> {{ item.username }}{% endif %}
+                    </div>
+
+                    <div>
+                      {% set sevf = (item.severity or 'medium')|lower %}
+                      {% if sevf == 'high' %}
+                        <span class="badge bg-danger">{{ item.severity }}</span>
+                      {% elif sevf == 'low' %}
+                        <span class="badge bg-success">{{ item.severity }}</span>
+                      {% else %}
+                        <span class="badge bg-warning text-dark">{{ item.severity }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="mt-3">
+                    <div class="muted small mb-2">Payload</div>
+                    <pre class="log-json">{{ item | tojson(indent=2) }}</pre>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="alert alert-secondary mb-0">No file-based alerts found.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Same theme behaviour as dashboard
+  const btn = document.getElementById('theme_toggle_alerts');
+  function applyTheme(t){
+    if(t==='dark') document.body.classList.add('theme-dark');
+    else document.body.classList.remove('theme-dark');
+    localStorage.setItem('sentinel_theme', t);
+  }
+  btn.addEventListener('click', ()=>{
+    const cur = localStorage.getItem('sentinel_theme') || 'light';
+    applyTheme(cur === 'light' ? 'dark' : 'light');
+  });
+  (function(){
+    const t = localStorage.getItem('sentinel_theme') || 'light';
+    applyTheme(t);
+  })();
+</script>
+{% endblock %}

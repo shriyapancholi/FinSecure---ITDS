@@ -1,51 +1,48 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Sign in — Sentinel</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <style>
-    /* fallback styling (keeps your theme) */
-    body{font-family:Poppins,Arial,sans-serif;background:linear-gradient(135deg,#0a192f,#172a45);color:#fff;display:flex;align-items:center;justify-content:center;height:100vh}
-    .login-container{background:#112240;padding:40px;border-radius:12px;width:380px;box-shadow:0 6px 18px rgba(0,0,0,.4)}
-    h2{color:#64ffda;text-align:left;margin-bottom:18px}
-    label{color:#ccd6f6;font-size:14px}
-    input{width:100%;padding:8px;margin:8px 0 14px;border-radius:6px;border:none;background:#0b1220;color:#fff}
-    button{background:#64ffda;color:#0b1220;padding:10px;border-radius:6px;border:none;font-weight:600;cursor:pointer}
-    .muted{color:#9aaad3;margin-top:12px}
-    .flash{padding:10px;border-radius:6px;margin-bottom:12px}
-    .flash.success{background:rgba(100,255,218,0.08);color:#64ffda}
-    .flash.error{background:rgba(255,100,100,0.08);color:#ff7777}
-  </style>
-</head>
-<body>
-  <div class="login-container">
-    <h2>Sign in</h2>
+{% extends 'base.html' %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="flash {{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+{% block title %}Sign in — Sentinel{% endblock %}
 
-    {% if error %}
-      <div class="flash error">{{ error }}</div>
-    {% endif %}
+{% block content %}
+<div class="card-panel auth">
+  <h2 style="margin-bottom:8px;color:var(--accent);font-weight:800">Sign in</h2>
+  <p class="muted" style="margin-bottom:18px">Security dashboard — analyst access</p>
 
-    <form method="post" action="{{ url_for('login') }}">
-      <label for="username">Username</label>
-      <input id="username" name="username" type="text" required autofocus value="{{ request.form.get('username','') }}">
+  {# flashed messages #}
+  {% set flashed = get_flashed_messages(with_categories=true) %}
+  {% if flashed %}
+    {% for category, message in flashed %}
+      <div class="alert {% if category == 'error' %}alert-danger{% else %}alert-info{% endif %}" role="alert">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
 
-      <label for="password">Password</label>
-      <input id="password" name="password" type="password" required>
+  <form method="post" action="{{ url_for('login') }}">
+    <div class="mb-3">
+      <label for="username" class="form-label muted">Username</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-person"></i></span>
+        <input id="username" name="username" type="text" required autofocus class="form-control" placeholder="Enter username" value="{{ request.form.get('username','') }}">
+      </div>
+    </div>
 
-      <button type="submit">Login</button>
-    </form>
+    <div class="mb-3">
+      <label for="password" class="form-label muted">Password</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+        <input id="password" name="password" type="password" required class="form-control" placeholder="Enter password">
+      </div>
+    </div>
 
-    <p class="muted">New? <a href="{{ url_for('signup') }}" style="color:#64ffda">Sign Up</a></p>
+    <div class="d-flex gap-2 align-items-center">
+      <button type="submit" class="btn btn-accent">Login</button>
+      <a href="{{ url_for('signup') }}" class="btn btn-outline-light">Create account</a>
+      <div class="ms-auto muted" style="font-size:0.92rem">Need help? Contact admin</div>
+    </div>
+  </form>
+
+  <div style="text-align:center;margin-top:14px;color:var(--muted);">
+    <small>By signing in you agree to demo terms • Sentinel OS</small>
   </div>
-</body>
-</html>
+</div>
+{% endblock %}

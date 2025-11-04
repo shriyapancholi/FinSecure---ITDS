@@ -3,49 +3,113 @@
 {% block title %}User Management - Sentinel OS{% endblock %}
 
 {% block content %}
-    <div class="container py-4">
-        <h2 class="fw-bold mb-4" style="color: var(--bs-primary-dark-text);">
-            <i class="bi bi-people-fill me-2"></i> User & Role Management (RBAC)
-        </h2>
-        
-        <div class="alert alert-info border-info" role="alert">
-            **Note:** This page visualizes the access control features managed by Shriya's **Authentication & RBAC** component.
-        </div>
-        
-        <div class="card shadow-sm">
-            <div class="card-header gradient-header text-white fw-bold">
-                Active System Users and Assigned Roles
-            </div>
-            <div class="card-body bg-light">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>User ID</th>
-                            <th>Name</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Last Login</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Loop through the placeholder data passed from app.py -->
-                        {% for user in users %}
-                        <tr>
-                            <td>{{ user.id }}</td>
-                            <td>{{ user.name }}</td>
-                            <td>{{ user.role }}</td>
-                            <td><span class="badge bg-{% if user.status == 'Restricted' %}danger{% else %}success{% endif %}">{{ user.status }}</span></td>
-                            <td>{{ user.last_login }}</td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-secondary">View Permissions</button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
+<div class="container" style="padding-top:28px; max-width:1100px;">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div>
+      <h2 style="color:var(--accent);font-weight:800;margin:0;">User & Role Management</h2>
+      <div class="muted" style="margin-top:6px;">Visualize and manage user roles, suspension state and last login activity</div>
     </div>
+
+    <div style="display:flex;gap:12px;align-items:center;">
+      <div class="metric" style="padding:10px 14px;border-radius:10px;">
+        <div style="font-size:12px;color:#9aaad3">Total users</div>
+        <div id="total_users" style="font-size:18px;color:var(--accent);font-weight:700">
+          {{ users|length }}
+        </div>
+      </div>
+
+      <a href="{{ url_for('signup') }}" class="btn btn-accent">Create user</a>
+    </div>
+  </div>
+
+  <div class="card" style="background:#0f2230;border:none;border-radius:12px;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,0.45);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-weight:700;color:#bfeee0">Active System Users</div>
+      <div class="muted" style="font-size:13px">Showing a snapshot — integrate with DB for live data</div>
+    </div>
+
+    <div style="overflow:auto;">
+      <table class="table table-borderless" style="min-width:900px;color:#dff7ef;">
+        <thead style="border-bottom:1px solid rgba(255,255,255,0.04);">
+          <tr class="muted" style="font-size:13px;">
+            <th>User ID</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Last Login</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.02);">
+            <td style="vertical-align:middle">{{ user.id }}</td>
+            <td style="vertical-align:middle;font-weight:600;color:#e6fff6">{{ user.name }}</td>
+            <td style="vertical-align:middle">
+              <span style="background:rgba(100,255,218,0.08);padding:6px 10px;border-radius:8px;font-weight:700;color:var(--accent);font-size:13px;">
+                {{ user.role }}
+              </span>
+            </td>
+            <td style="vertical-align:middle">
+              {% if user.status == 'Restricted' %}
+                <span style="background:#ff7a7a;color:#2b0b0b;padding:6px 10px;border-radius:8px;font-weight:700;font-size:13px;">{{ user.status }}</span>
+              {% else %}
+                <span style="background:#a6f3c4;color:#05280f;padding:6px 10px;border-radius:8px;font-weight:700;font-size:13px;">{{ user.status }}</span>
+              {% endif %}
+            </td>
+            <td style="vertical-align:middle" class="muted">{{ user.last_login }}</td>
+            <td style="vertical-align:middle;text-align:right">
+              <div style="display:inline-flex;gap:8px;">
+                <form method="post" action="{{ url_for('user_view') }}" style="display:inline;">
+                  <input type="hidden" name="user_id" value="{{ user.id }}">
+                  <button type="submit" class="btn btn-sm btn-outline-light">View</button>
+                </form>
+
+                <form method="post" action="{{ url_for('user_toggle_suspend') }}" style="display:inline;">
+                  <input type="hidden" name="user_id" value="{{ user.id }}">
+                  {% if user.status == 'Restricted' %}
+                    <button type="submit" class="btn btn-sm btn-accent">Unsuspend</button>
+                  {% else %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Suspend</button>
+                  {% endif %}
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="muted">No users available.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:16px;margin-top:18px;align-items:flex-start;">
+    <div style="flex:1;">
+      <div class="metric" style="padding:12px;">
+        <h5 style="margin:0;color:#bfeee0">Quick Actions</h5>
+        <div class="muted" style="margin-top:8px">Convenience controls for admin tasks</div>
+        <div style="margin-top:10px;display:flex;gap:8px;">
+          <a href="{{ url_for('user_management') }}" class="btn btn-outline-light">Refresh</a>
+          <a href="{{ url_for('alerts_detail') }}" class="btn btn-accent">View Alerts</a>
+          <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light">Back to Dashboard</a>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:360px;">
+      <div class="metric" style="padding:12px;">
+        <h6 style="margin:0;color:#bfeee0">Summary</h6>
+        <div style="margin-top:10px;" class="muted">
+          <div>Total users: <strong style="color:var(--accent)">{{ users|length }}</strong></div>
+          <div style="margin-top:6px">Restricted: <strong style="color:#ff7a7a">{{ users|selectattr('status','equalto','Restricted')|list|length }}</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
 {% endblock %}

@@ -25,5 +25,50 @@
             "mem_usage": 80
         },
         "received_at": "2025-11-03 11:37:08"
+    },
+    {
+        "type": "auto_lockout",
+        "username": "test45",
+        "ip": "127.0.0.1",
+        "severity": "high",
+        "details": {
+            "reason": "failed_login_threshold",
+            "username": "test45",
+            "ip": "127.0.0.1",
+            "failed_count": 7,
+            "window_minutes": 15
+        },
+        "created_at": "2025-11-03 10:05:00",
+        "received_at": "2025-11-03 10:05:00"
+    },
+    {
+        "type": "auto_lockout",
+        "username": "testfinal",
+        "ip": "127.0.0.1",
+        "severity": "high",
+        "details": {
+            "reason": "failed_login_threshold",
+            "username": "testfinal",
+            "ip": "127.0.0.1",
+            "failed_count": 5,
+            "window_minutes": 15
+        },
+        "created_at": "2025-11-04 11:16:16",
+        "received_at": "2025-11-04 11:16:16"
+    },
+    {
+        "type": "auto_lockout",
+        "username": "testfinal",
+        "ip": "127.0.0.1",
+        "severity": "high",
+        "details": {
+            "reason": "failed_login_threshold",
+            "username": "testfinal",
+            "ip": "127.0.0.1",
+            "failed_count": 6,
+            "window_minutes": 15
+        },
+        "created_at": "2025-11-04 11:21:43",
+        "received_at": "2025-11-04 11:21:43"
     }
 ]
