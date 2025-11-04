@@ -1,48 +1,56 @@
 {% extends 'base.html' %}
-
-{% block title %}Sign Up — Sentinel{% endblock %}
+{% block title %}Sign up — Sentinel{% endblock %}
 
 {% block content %}
-<div class="container" style="max-width:860px;">
-  <div class="row justify-content-center">
-    <div class="col-12 col-md-6">
-      <div class="card-panel" style="margin-top:48px;">
-        <h2 style="margin-bottom:8px;color:var(--accent);font-weight:800">Create account</h2>
-        <p class="muted" style="margin-bottom:18px">Register a demo analyst account for Sentinel OS</p>
+<div class="card-panel auth">
+  <h2 style="color:var(--accent);margin-bottom:.5rem;">Create account</h2>
+  <div class="muted" style="margin-bottom:1rem;">Choose your role (Admin needs a code).</div>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert {% if category == 'error' %}alert-danger{% else %}alert-info{% endif %}" role="alert">
-                {{ message }}
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+  <form method="post">
+    <div class="mb-3">
+      <label class="form-label muted">Username</label>
+      <input class="form-control" name="username" required>
+    </div>
 
-        <form method="post" action="{{ url_for('signup') }}">
-          <div class="mb-3">
-            <label for="username" class="form-label muted">Username</label>
-            <input id="username" name="username" type="text" required autofocus class="form-control" value="{{ request.form.get('username','') }}">
-          </div>
+    <div class="mb-3">
+      <label class="form-label muted">Password</label>
+      <input class="form-control" name="password" type="password" required>
+    </div>
 
-          <div class="mb-3">
-            <label for="password" class="form-label muted">Password</label>
-            <input id="password" name="password" type="password" required class="form-control">
-          </div>
-
-          <div class="d-flex gap-2 align-items-center">
-            <button type="submit" class="btn btn-accent">Create account</button>
-            <a href="{{ url_for('login') }}" class="btn btn-outline-light">Back to login</a>
-            <div class="ms-auto muted" style="font-size:0.92rem">&nbsp;</div>
-          </div>
-        </form>
-      </div>
-
-      <div style="text-align:center;margin-top:18px;color:var(--muted);">
-        <small>Sentinel OS — demo dashboard for the FinSecure project</small>
+    <div class="mb-3">
+      <label class="form-label muted">Role</label>
+      <div class="d-flex gap-3">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="role" id="rAnalyst" value="analyst" checked>
+          <label class="form-check-label" for="rAnalyst">Analyst</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="role" id="rAdmin" value="admin">
+          <label class="form-check-label" for="rAdmin">Admin</label>
+        </div>
       </div>
     </div>
-  </div>
+
+    <div class="mb-3" id="adminCodeWrap" style="display:none;">
+      <label class="form-label muted">Admin code</label>
+      <input class="form-control" name="admin_code" placeholder="Enter admin signup code">
+      <div class="form-text">Ask an existing admin for this code.</div>
+    </div>
+
+    <button class="btn btn-accent w-100" type="submit">Sign Up</button>
+    <div class="small-footer">Already have an account? <a href="{{ url_for('login') }}">Login</a></div>
+  </form>
 </div>
+
+<script>
+  const rAdmin = document.getElementById('rAdmin');
+  const rAnalyst = document.getElementById('rAnalyst');
+  const codeWrap = document.getElementById('adminCodeWrap');
+  function toggleCode(){
+    codeWrap.style.display = rAdmin.checked ? 'block' : 'none';
+  }
+  rAdmin.addEventListener('change', toggleCode);
+  rAnalyst.addEventListener('change', toggleCode);
+  toggleCode();
+</script>
 {% endblock %}

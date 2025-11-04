@@ -1,115 +1,165 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}User Management - Sentinel OS{% endblock %}
+{% block title %}User Management — Sentinel{% endblock %}
 
 {% block content %}
-<div class="container" style="padding-top:28px; max-width:1100px;">
+<style>
+  /* Page header */
+  .um-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .um-head h1{margin:0;color:var(--accent);font-weight:800}
 
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-    <div>
-      <h2 style="color:var(--accent);font-weight:800;margin:0;">User & Role Management</h2>
-      <div class="muted" style="margin-top:6px;">Visualize and manage user roles, suspension state and last login activity</div>
-    </div>
+  /* Card/table wrapper */
+  .um-card{
+    background: var(--card-bg);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(0,0,0,0.04);
+    padding: 16px 18px;
+  }
+  body.theme-dark .um-card{ border-color: rgba(255,255,255,0.10); }
 
-    <div style="display:flex;gap:12px;align-items:center;">
-      <div class="metric" style="padding:10px 14px;border-radius:10px;">
-        <div style="font-size:12px;color:#9aaad3">Total users</div>
-        <div id="total_users" style="font-size:18px;color:var(--accent);font-weight:700">
-          {{ users|length }}
-        </div>
-      </div>
+  /* Table */
+  table.um{width:100%; border-collapse:separate; border-spacing:0 8px;}
+  table.um thead th{
+    font-weight:700; color:var(--text-dark); font-size:14px; padding:10px 12px;
+    border-bottom:1px solid rgba(0,0,0,0.06);
+  }
+  body.theme-dark table.um thead th{ border-color: rgba(255,255,255,0.12); }
+  table.um tbody tr{ background: rgba(255,255,255,0.9); }
+  table.um tbody td{ padding:12px; font-size:14px; border-top:1px solid rgba(0,0,0,0.04); }
+  table.um tbody tr:first-child td{ border-top:none; }
+  body.theme-dark table.um tbody tr{ background: rgba(255,255,255,0.06); }
+  body.theme-dark table.um tbody td{ border-color: rgba(255,255,255,0.10); }
 
-      <a href="{{ url_for('signup') }}" class="btn btn-accent">Create user</a>
-    </div>
-  </div>
+  /* Small buttons that match the app */
+  .um-btn{ background:transparent; border:1px solid rgba(0,0,0,0.12); padding:6px 10px; border-radius:8px; font-weight:600; }
+  .um-btn:hover{ transform: translateY(-1px); }
+  .um-btn.resume{ color: var(--success); }
+  .um-btn.delete{ color: var(--danger); }
+  body.theme-dark .um-btn{ border-color: rgba(255,255,255,0.18); }
 
-  <div class="card" style="background:#0f2230;border:none;border-radius:12px;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,0.45);">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div style="font-weight:700;color:#bfeee0">Active System Users</div>
-      <div class="muted" style="font-size:13px">Showing a snapshot — integrate with DB for live data</div>
-    </div>
+  .pill-role{
+    display:inline-block; padding:4px 10px; border-radius:999px; font-weight:700; font-size:12px;
+    background: rgba(0,0,0,0.06); color: var(--text-dark);
+  }
+  body.theme-dark .pill-role{ background: rgba(255,255,255,0.12); }
+</style>
 
-    <div style="overflow:auto;">
-      <table class="table table-borderless" style="min-width:900px;color:#dff7ef;">
-        <thead style="border-bottom:1px solid rgba(255,255,255,0.04);">
-          <tr class="muted" style="font-size:13px;">
-            <th>User ID</th>
-            <th>Name</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Last Login</th>
-            <th style="text-align:right">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for user in users %}
-          <tr style="border-bottom:1px solid rgba(255,255,255,0.02);">
-            <td style="vertical-align:middle">{{ user.id }}</td>
-            <td style="vertical-align:middle;font-weight:600;color:#e6fff6">{{ user.name }}</td>
-            <td style="vertical-align:middle">
-              <span style="background:rgba(100,255,218,0.08);padding:6px 10px;border-radius:8px;font-weight:700;color:var(--accent);font-size:13px;">
-                {{ user.role }}
-              </span>
-            </td>
-            <td style="vertical-align:middle">
-              {% if user.status == 'Restricted' %}
-                <span style="background:#ff7a7a;color:#2b0b0b;padding:6px 10px;border-radius:8px;font-weight:700;font-size:13px;">{{ user.status }}</span>
-              {% else %}
-                <span style="background:#a6f3c4;color:#05280f;padding:6px 10px;border-radius:8px;font-weight:700;font-size:13px;">{{ user.status }}</span>
-              {% endif %}
-            </td>
-            <td style="vertical-align:middle" class="muted">{{ user.last_login }}</td>
-            <td style="vertical-align:middle;text-align:right">
-              <div style="display:inline-flex;gap:8px;">
-                <form method="post" action="{{ url_for('user_view') }}" style="display:inline;">
-                  <input type="hidden" name="user_id" value="{{ user.id }}">
-                  <button type="submit" class="btn btn-sm btn-outline-light">View</button>
-                </form>
-
-                <form method="post" action="{{ url_for('user_toggle_suspend') }}" style="display:inline;">
-                  <input type="hidden" name="user_id" value="{{ user.id }}">
-                  {% if user.status == 'Restricted' %}
-                    <button type="submit" class="btn btn-sm btn-accent">Unsuspend</button>
-                  {% else %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger">Suspend</button>
-                  {% endif %}
-                </form>
-              </div>
-            </td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="6" class="muted">No users available.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<div class="container">
+  <div class="um-head">
+    <h1>User Management</h1>
+    <div style="display:flex; gap:8px">
+      <button id="theme_toggle_um" class="resume-btn">Change Mode</button>
     </div>
   </div>
 
-  <div style="display:flex;gap:16px;margin-top:18px;align-items:flex-start;">
-    <div style="flex:1;">
-      <div class="metric" style="padding:12px;">
-        <h5 style="margin:0;color:#bfeee0">Quick Actions</h5>
-        <div class="muted" style="margin-top:8px">Convenience controls for admin tasks</div>
-        <div style="margin-top:10px;display:flex;gap:8px;">
-          <a href="{{ url_for('user_management') }}" class="btn btn-outline-light">Refresh</a>
-          <a href="{{ url_for('alerts_detail') }}" class="btn btn-accent">View Alerts</a>
-          <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light">Back to Dashboard</a>
-        </div>
-      </div>
-    </div>
-
-    <div style="width:360px;">
-      <div class="metric" style="padding:12px;">
-        <h6 style="margin:0;color:#bfeee0">Summary</h6>
-        <div style="margin-top:10px;" class="muted">
-          <div>Total users: <strong style="color:var(--accent)">{{ users|length }}</strong></div>
-          <div style="margin-top:6px">Restricted: <strong style="color:#ff7a7a">{{ users|selectattr('status','equalto','Restricted')|list|length }}</strong></div>
-        </div>
-      </div>
-    </div>
+  <div class="um-card">
+    <table class="um">
+      <thead>
+        <tr>
+          <th style="width:70px">ID</th>
+          <th>User</th>
+          <th style="width:160px">Role</th>
+          <th style="width:140px">Suspended?</th>
+          <th style="width:220px">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="um_tbody">
+        {% for u in users %}
+        <tr>
+          <td>{{ u.id }}</td>
+          <td>{{ u.username }}</td>
+          <td>
+            <span class="pill-role">{{ (u.role or 'analyst') }}</span>
+          </td>
+          <td>
+            {% if u.suspended_until %}
+              {% set su = u.suspended_until %}
+              {# show Yes only if in future; simple text fallback #}
+              Yes (until {{ su }})
+            {% else %}
+              No
+            {% endif %}
+          </td>
+          <td>
+            <button class="um-btn resume" data-uid="{{ u.id }}" data-uname="{{ u.username }}">Resume</button>
+            <button class="um-btn delete" data-uid="{{ u.id }}" data-uname="{{ u.username }}">Delete</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-
 </div>
+
+<script>
+  // ---------- Theme sync (same as other pages) ----------
+  const tBtn = document.getElementById('theme_toggle_um');
+  function applyTheme(t){
+    if(t==='dark') document.body.classList.add('theme-dark');
+    else document.body.classList.remove('theme-dark');
+    localStorage.setItem('sentinel_theme', t);
+  }
+  tBtn.addEventListener('click', ()=>{
+    const cur = localStorage.getItem('sentinel_theme') || 'light';
+    applyTheme(cur === 'light' ? 'dark' : 'light');
+  });
+  (function initTheme(){
+    const t = localStorage.getItem('sentinel_theme') || 'light';
+    applyTheme(t);
+  })();
+
+  // ---------- Actions (Resume / Delete) ----------
+  const tbody = document.getElementById('um_tbody');
+
+  // Delegate clicks to buttons inside the table
+  tbody.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('button');
+    if(!btn) return;
+
+    const uid = btn.dataset.uid;
+    const uname = btn.dataset.uname || '';
+
+    if(btn.classList.contains('resume')){
+      if(!confirm(`Resume user '${uname}'?`)) return;
+      try{
+        const res = await fetch('/api/users/resume', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ user_id: uid, username: uname })
+        });
+        const js = await res.json();
+        if(res.ok){
+          alert(js.message || 'User resumed');
+          location.reload();
+        }else{
+          alert(js.error || 'Resume failed');
+        }
+      }catch(err){
+        alert('Error: ' + err);
+      }
+    }
+
+    if(btn.classList.contains('delete')){
+      const reason = prompt(`Delete user '${uname}'.\n(Optional) Enter a reason for audit:`) || '';
+      if(!confirm(`Are you sure you want to DELETE '${uname}'? This cannot be undone.`)) return;
+      try{
+        const res = await fetch('/api/users/delete', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ user_id: uid, username: uname, reason })
+        });
+        const js = await res.json();
+        if(res.ok){
+          alert(js.message || 'User deleted');
+          location.reload();
+        }else{
+          alert(js.error || 'Delete failed');
+        }
+      }catch(err){
+        alert('Error: ' + err);
+      }
+    }
+  });
+</script>
 {% endblock %}

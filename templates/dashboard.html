@@ -45,6 +45,27 @@
         font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
         font-size:13px;white-space:pre-wrap}
 
+  /* Flag counter + Delete button */
+  .flag-badge{
+    display:inline-block;
+    font-size:12px;
+    padding:2px 8px;
+    border-radius:999px;
+    border:1px solid rgba(0,0,0,0.06);
+    margin-left:6px;
+    color:var(--muted);
+    background: rgba(0,0,0,0.03);
+  }
+  .danger-btn{
+    background: transparent;
+    border:1px solid var(--danger);
+    color: var(--danger);
+    padding:6px 10px;
+    border-radius:8px;
+    font-weight:600;
+  }
+  .danger-btn:hover{ filter: brightness(0.92); }
+
   /* --- Dark tweaks specific to dashboard --- */
   body.theme-dark .json{
     background: rgba(255,255,255,0.06);
@@ -57,6 +78,11 @@
   }
   body.theme-dark .donut circle[stroke="#eef2f2"]{
     stroke: rgba(255,255,255,0.12) !important;
+  }
+  body.theme-dark .flag-badge{
+    border-color: rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.06);
+    color:#cfd9dd;
   }
 </style>
 
@@ -234,12 +260,14 @@
     document.getElementById('donut-label').textContent = `${primary}%`;
   }
 
-  function renderAnomalies(list){
+  async function renderAnomalies(list){
     const box = document.getElementById('anomalies_list');
     box.innerHTML = '';
     if(!list.length){ box.innerHTML = '<div class="mutd">No anomalies found</div>'; updateDonut([]); return; }
     updateDonut(list);
 
+    // Build cards
+    const usersOnScreen = new Set();
     list.forEach(a=>{
       const si = severityInfo(a.severity);
       const el = document.createElement('div');
@@ -250,26 +278,53 @@
       const created  = a.created_at || '-';
       const score    = a.score ?? '-';
 
+      usersOnScreen.add(username);
+
       el.innerHTML = `
         <div class="meta">
           <div>
             <div class="ttl">ID: ${a.id} <span class="pill ${si.cls}" style="margin-left:8px">${si.text}</span></div>
             <div class="mutd" style="font-size:13px">Score: ${score}</div>
           </div>
-          <div class="mutd" style="text-align:right;min-width:180px">
-            <div style="font-weight:600">${username}</div>
+          <div class="mutd" style="text-align:right;min-width:220px">
+            <div style="font-weight:600">
+              ${username}
+              <span class="flag-badge" data-flag-user="${username}">flagged —</span>
+            </div>
             <div style="font-size:13px">${created}</div>
           </div>
         </div>
         <pre class="json">${prettyJSON(a.details)}</pre>
-        <div style="text-align:right;margin-top:8px">
+        <div style="text-align:right;margin-top:8px; display:flex; gap:8px; justify-content:flex-end">
           <button class="resume-btn" data-user="${a.user_id||''}" data-username="${(a.details && a.details.username) ? a.details.username : ''}">Resume user</button>
+          <button class="danger-btn delete-user-btn" data-user="${a.user_id||''}" data-username="${(a.details && a.details.username) ? a.details.username : ''}">Delete user</button>
         </div>
       `;
       box.appendChild(el);
     });
 
-    // actions
+    // Batch fetch flag counts for distinct usernames on screen
+    const userList = Array.from(usersOnScreen).filter(Boolean);
+    if (userList.length){
+      try{
+        const resp = await fetch('/api/users/flag_counts', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ users: userList })
+        });
+        const data = await resp.json();
+        const map = (resp.ok && data && data.counts) ? data.counts : {};
+        box.querySelectorAll('.flag-badge[data-flag-user]').forEach(n=>{
+          const u = n.dataset.flagUser;
+          const c = (map && (u in map)) ? map[u] : '—';
+          n.textContent = `flagged ${c}×`;
+        });
+      }catch(e){
+        box.querySelectorAll('.flag-badge[data-flag-user]').forEach(n=> n.textContent = 'flagged —');
+      }
+    }
+
+    // Actions: resume
     box.querySelectorAll('.resume-btn').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         const userId   = btn.dataset.user || null;
@@ -283,6 +338,31 @@
           const js = await res.json();
           if(res.ok){ alert(js.message || 'Resumed'); fetchAnomalies(); fetchMetrics(); }
           else { alert(js.error || 'Resume failed'); }
+        }catch(err){ alert('Error: ' + err); }
+      });
+    });
+
+    // Actions: delete
+    box.querySelectorAll('.delete-user-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const userId   = btn.dataset.user || null;
+        const username = btn.dataset.username || null;
+        const label = username || userId || 'this user';
+        if(!confirm(`Permanently delete ${label}? This removes the user account (anomalies/logs are kept).`)) return;
+
+        try{
+          const res = await fetch('/api/users/delete', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ user_id: userId, username })
+          });
+          const js = await res.json();
+          if(res.ok){
+            alert(js.message || 'User deleted');
+            fetchMetrics(); fetchAnomalies();
+          }else{
+            alert(js.error || 'Delete failed');
+          }
         }catch(err){ alert('Error: ' + err); }
       });
     });
