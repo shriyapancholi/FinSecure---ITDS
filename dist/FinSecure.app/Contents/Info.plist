@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>FinSecure</string>
 	<key>CFBundleIconFile</key>
-	<string>icon-windowed.icns</string>
+	<string>FinSecure.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.finsecure.itds</string>
 	<key>CFBundleInfoDictionaryVersion</key>

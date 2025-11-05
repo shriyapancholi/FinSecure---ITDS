@@ -3,24 +3,28 @@
 block_cipher = None
 
 a = Analysis(
-    ['desktop_boot.py'],
+    ['desktop_boot.py'],          # ✅ entry = desktop wrapper
     pathex=[],
     binaries=[],
     datas=[
-        ('app.py', '.'),            # Flask backend
+        ('app.py', '.'),          # ✅ Flask backend file
         ('templates', 'templates'),
         ('static', 'static'),
-        ('finsecure.db', '.'),      # seed DB (optional)
-        ('.env', '.'),              # optional
+        ('finsecure.db', '.'),    # optional seed DB
+        ('.env', '.'),            # optional env file
     ],
     hiddenimports=[
+        # Flask / middleware / limiter
         'werkzeug.middleware.proxy_fix',
         'flask_limiter',
         'flask_limiter.util',
         'dotenv',
-        # >>> critical for your crash:
+        'requests',
+        # ✅ critical for mac build where sqlite sometimes fails to hook
         'sqlite3',
         '_sqlite3',
+        # Desktop WebView (usually auto-detected, keep as safety)
+        'webview',
     ],
     hookspath=[],
     hooksconfig={},
@@ -45,17 +49,18 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,           # windowed
+    console=False,            # ✅ windowed app
     disable_windowed_traceback=False,
-    argv_emulation=True,     # macOS friendly
+    argv_emulation=True,      # ✅ macOS drag/drop/open handling
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
 )
 
+# ✅ App bundle with your icon (place FinSecure.icns in project root)
 app = BUNDLE(
     exe,
     name='FinSecure.app',
-    icon=None,
+    icon='FinSecure.icns',
     bundle_identifier='com.finsecure.itds',
 )
