@@ -1,15 +1,19 @@
 # auth_app.py
 """
-Improved FastAPI auth app with rule-based anomaly detection.
+Improved FastAPI auth app with rule-based anomaly detection + admin-code enforcement.
+
 Rules implemented:
 - LOW: exactly 2 failed logins in 15 min, OR odd-hour (01–05) successful login
 - MEDIUM: 3–4 failed logins in 15 min, OR successful login from a new device (User-Agent change)
 - HIGH: >=5 failed logins in 15 min -> auto-suspend user
+
 Also:
 - persists anomalies to sqlite table `anomalies`
 - keeps local `auth_logs` for counting
 - stores last_user_agent in users to detect new devices
+- enforces Admin signup with a permanent admin code from ~/.finsecure/config.json
 """
+
 from financial_threats import detect_threats
 import os
 import sqlite3
@@ -26,17 +30,41 @@ import jwt  # PyJWT
 import json
 from dotenv import load_dotenv
 
-load_dotenv()
 # external logger (your existing module)
 from log_manager import log_event
+
+# ---------- load .env (non-critical) ----------
+load_dotenv()
+
+# ---------- Permanent Admin Secret loader ----------
+def load_admin_secret() -> str:
+    """
+    Returns ADMIN_SECRET from ~/.finsecure/config.json, else from env ADMIN_SECRET,
+    else empty string.
+    """
+    conf_path = os.path.join(os.path.expanduser("~"), ".finsecure", "config.json")
+    try:
+        if os.path.exists(conf_path):
+            with open(conf_path, "r") as f:
+                data = json.load(f)
+                secret = (data or {}).get("ADMIN_SECRET", "")
+                if isinstance(secret, str):
+                    return secret.strip()
+    except Exception:
+        pass
+    # fallback to env if file missing
+    return os.getenv("ADMIN_SECRET", "").strip()
 
 # ---------------- CONFIG ----------------
 DB_PATH = os.getenv("FINSEC_DB", "finsecure.db")
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
-ADMIN_SECRET = os.getenv("sentienl@admin123") 
+ADMIN_SECRET = load_admin_secret()  # <— permanent source
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+# Debug print (optional): comment out after verifying once
+print("[auth] ADMIN_SECRET loaded?", "YES" if ADMIN_SECRET else "EMPTY")
 
 # Rule params
 LOCKOUT_WINDOW_MINUTES = 15
@@ -66,6 +94,7 @@ class SignupModel(BaseModel):
     username: str
     password: str
     role: RoleEnum = RoleEnum.user
+    admin_code: Optional[str] = None  # <— add code field (used only if role=admin)
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -128,6 +157,11 @@ def init_db():
             )
         """)
         conn.commit()
+
+def any_admin_exists() -> bool:
+    with get_db() as conn:
+        row = conn.execute("SELECT COUNT(*) AS c FROM users WHERE role = 'admin'").fetchone()
+        return int(row["c"]) > 0
 
 # run migrations at import
 init_db()
@@ -231,19 +265,34 @@ def raise_anomaly(username: Optional[str], severity: str, score: float, details:
 # ---------------- ENDPOINTS ----------------
 @app.post("/signup", response_model=dict, status_code=201)
 def signup(payload: SignupModel, request: Request):
+    """
+    Enforce admin code:
+      - If no admin exists yet -> first admin can be created without code
+      - Otherwise, role='admin' requires payload.admin_code == ADMIN_SECRET
+    """
+    desired_role = payload.role.value
+    # If user wants admin and there is already an admin -> require correct code
+    if desired_role == RoleEnum.admin.value:
+        if any_admin_exists():
+            if not ADMIN_SECRET or payload.admin_code != ADMIN_SECRET:
+                # log + block
+                log_event(payload.username, "signup_admin", "failed", "Invalid admin code")
+                raise HTTPException(status_code=400, detail="Invalid admin code")
+        # (else: first admin allowed without code)
+
     hashed_pw = hash_password(payload.password)
     try:
         with get_db() as conn:
             conn.execute(
                 "INSERT INTO users (username, password, role, status, last_user_agent) VALUES (?, ?, ?, 'active', NULL)",
-                (payload.username, hashed_pw, payload.role.value)
+                (payload.username, hashed_pw, desired_role)
             )
             conn.commit()
         # logs (external + local)
-        log_event(payload.username, "signup", "success", "User created")
+        log_event(payload.username, "signup", "success", f"User created as {desired_role}")
         ip = request.headers.get("X-Forwarded-For", request.client.host)
         ua = request.headers.get("User-Agent", "-")
-        save_auth_log(payload.username, ip, ua, "signup", "success", "User created")
+        save_auth_log(payload.username, ip, ua, "signup", "success", f"User created as {desired_role}")
         return {"msg": "User created"}
     except sqlite3.IntegrityError:
         log_event(payload.username, "signup", "failed", "Username exists")

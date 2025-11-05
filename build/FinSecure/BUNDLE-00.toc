@@ -1,0 +1,3 @@
+([('FinSecure',
+   '/Users/shriyapancholi/Desktop/FinSecure---ITDS/dist/FinSecure',
+   'EXECUTABLE')],)
