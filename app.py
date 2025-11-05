@@ -1,12 +1,5 @@
-# app.py (hardened ready-to-paste)
 from flask import Flask, render_template, jsonify, request, redirect, url_for, flash, session, Response
-import json
-import os
-import time
-import subprocess
-import sys
-import threading
-import hashlib
+import json, os, time, subprocess, sys, threading, hashlib, shutil
 from datetime import datetime, timedelta
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -15,24 +8,90 @@ from collections import defaultdict
 from io import StringIO
 import csv
 from typing import Optional, Dict, Any
-
-# Rate limiter
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-# ---------------- App & config ----------------
-# secret key from env (require in production)
-SECRET_KEY = os.environ.get("SENTINEL_SECRET_KEY")
-FLASK_ENV = os.environ.get("FLASK_ENV", "development")
-ADMIN_SECRET = os.environ.get("ADMIN_SECRET") 
+from dotenv import load_dotenv
+load_dotenv()
 
-if not SECRET_KEY:
-    if FLASK_ENV == "production":
-        raise RuntimeError("SENTINEL_SECRET_KEY environment variable is required in production")
-    # dev fallback: ephemeral key (random)
-    SECRET_KEY = os.urandom(32).hex()
+# --- Admin secret loader: ENV overrides file (~/.fin_secure/config.json) ---
+def _load_admin_secret():
+    # 1) ENV wins
+    env_val = os.environ.get("ADMIN_SECRET")
+    if env_val and env_val.strip():
+        print("[admin-secret] loaded from ENV")
+        return env_val.strip()
 
-app = Flask(__name__)
+    # 2) file: try both names
+    try_paths = [
+        os.path.join(os.path.expanduser("~"), ".fin_secure", "config.json"),
+        os.path.join(os.path.expanduser("~"), ".finsecure", "config.json"),
+    ]
+    for cfg_path in try_paths:
+        try:
+            if os.path.exists(cfg_path):
+                with open(cfg_path, "r") as f:
+                    v = (json.load(f).get("ADMIN_SECRET") or "").strip()
+                    print(f"[admin-secret] loaded from {cfg_path}: present={bool(v)}")
+                    if v:
+                        return v
+        except Exception as e:
+            print("[admin-secret] load warn:", e)
+
+    print("[admin-secret] not set; admin signup will be blocked unless first admin")
+    return ""
+
+# --- permanent admin secret (file/env) ---
+def get_admin_secret() -> str:
+    """Always return the current admin secret from ENV or ~/.fin_secure/config.json"""
+    env_val = os.environ.get("ADMIN_SECRET", "")
+    if env_val.strip():
+        return env_val.strip()
+    try:
+        cfg_path = os.path.join(os.path.expanduser("~"), ".fin_secure", "config.json")
+        if os.path.exists(cfg_path):
+            with open(cfg_path, "r") as f:
+                data = json.load(f) or {}
+            return (data.get("ADMIN_SECRET") or "").strip()
+    except Exception:
+        pass
+    return ""
+
+ADMIN_SECRET = get_admin_secret()   # for startup info/logs
+print("[flask] ADMIN_SECRET loaded?", "YES" if ADMIN_SECRET else "EMPTY")
+
+# ✅ Detect PyInstaller build environment
+if getattr(sys, "_MEIPASS", None):
+    BASE_PATH = sys._MEIPASS     # bundled/frozen
+else:
+    BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+
+# ✅ Writable folder for DB + logs (desktop safety)
+APP_DATA_DIR = os.path.join(os.path.expanduser("~"), ".finsecure")
+os.makedirs(APP_DATA_DIR, exist_ok=True)
+
+# ✅ Original DB bundled as seed. Copy to user folder on first run.
+SEEDED_DB = os.path.join(BASE_PATH, "finsecure.db")
+DB_PATH    = os.path.join(APP_DATA_DIR, "finsecure.db")
+METRICS_FILE = os.path.join(APP_DATA_DIR, "metrics.json")
+ALERTS_FILE  = os.path.join(APP_DATA_DIR, "alerts_log.json")
+
+try:
+    if os.path.exists(SEEDED_DB) and not os.path.exists(DB_PATH):
+        shutil.copy2(SEEDED_DB, DB_PATH)
+except Exception as e:
+    print("[DB seed warning]", e)
+
+# ✅ Flask with correct template/static path mapping
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_PATH, "templates"),
+    static_folder=os.path.join(BASE_PATH, "static"),
+)
+
+# --- Secrets & env (REQUIRED for sessions & admin signup) ---
+SECRET_KEY  = os.environ.get("SENTINEL_SECRET_KEY") or os.urandom(32).hex()
+FLASK_ENV   = os.environ.get("FLASK_ENV", "development")  # keep here for consistency
 app.secret_key = SECRET_KEY
 
 # Trust reverse proxy headers (adjust counts to match your infra)
@@ -45,6 +104,8 @@ app.config.update(
     PREFERRED_URL_SCHEME='https',
     MAX_CONTENT_LENGTH = 4 * 1024 * 1024  # 4 MB limit for requests; tune as needed
 )
+
+FLASK_ENV = os.environ.get("FLASK_ENV", "development")
 
 # Set SESSION_COOKIE_SECURE only in production where HTTPS is actually used
 if FLASK_ENV == "production":
@@ -71,10 +132,10 @@ except Exception as e:
     )
     limiter.init_app(app)
 
-# ---------------- Constants & DB ----------------
-METRICS_FILE = 'metrics.json'
-ALERTS_FILE = 'alerts_log.json'
-DB_PATH = os.path.join(os.path.dirname(__file__), "finsecure.db")
+# # ---------------- Constants & DB ----------------
+# METRICS_FILE = 'metrics.json'
+# ALERTS_FILE = 'alerts_log.json'
+# DB_PATH = os.path.join(os.path.dirname(__file__), "finsecure.db")
 
 # Lockout / suspension config
 LOCKOUT_THRESHOLD = 5
@@ -483,24 +544,25 @@ def signup():
         conn = get_db_conn()
         cur = conn.cursor()
 
-        # ✅ First check if ANY admin exists
+# ✅ First check if ANY admin exists
         cur.execute("SELECT COUNT(*) AS c FROM users WHERE role='admin'")
         admin_count = int(cur.fetchone()['c'])
 
-        # ✅ Decide role
         role = "analyst"
-
         if admin_count == 0:
-            # first account automatically becomes admin
+            # first account becomes admin w/o code
             role = "admin"
         else:
-            # now admin signup requires ADMIN_SECRET
-            if admin_code and ADMIN_SECRET and admin_code == ADMIN_SECRET:
-                role = "admin"
-            elif admin_code:
-                flash("Invalid admin code.", "error")
-                conn.close()
-                return render_template('signup.html')
+            # read fresh secret every time (no global reliance)
+            current_secret = get_admin_secret()
+            if admin_code:
+                if current_secret and admin_code == current_secret:
+                    role = "admin"
+                else:
+                    flash("Invalid admin code.", "error")
+                    conn.close()
+                    return render_template('signup.html')
+
 
         pw_hash = generate_password_hash(password, method="pbkdf2:sha256", salt_length=12)
 
@@ -543,6 +605,18 @@ def logout():
     session.clear()
     flash("Logged out", "success")
     return redirect(url_for('login'))
+
+@app.get("/_debug/secret")
+def _debug_secret():
+    current_secret = get_admin_secret()
+    src = "ENV" if os.environ.get("ADMIN_SECRET") else "~/.fin_secure/config.json"
+    return jsonify({"loaded": bool(current_secret), "source": src, "value": current_secret})
+
+# --- Health check (no rate limit) ---
+@app.get("/_health")
+@limiter.exempt
+def health():
+    return "ok", 200
 
 @app.route('/dashboard')
 def dashboard():
@@ -1096,50 +1170,22 @@ def enforce_https_in_production():
         url = request.url.replace("http://", "https://", 1)
         return redirect(url, code=301)
 
-# ---------------- Run ----------------
 if __name__ == '__main__':
-    # Ensure tables exist (incl. audit_logs)
-    ensure_db_schema()
     try:
-        ensure_audit_table()   # harmless if already created
+        ensure_db_schema(); ensure_audit_table()
     except Exception as e:
-        print("[audit] ensure table error:", e)
+        print("[init] DB schema ensure failed:", e)
 
-    # Verify logs chain at startup (best-effort)
-    try:
-        conn = get_db_conn()
-        ok, bad, msg = verify_logs_chain(conn)
-        conn.close()
-        if not ok:
-            print("[SECURITY] Log chain verification FAILED:", msg)
-        else:
-            print("[SECURITY] Log chain OK")
-    except Exception as e:
-        print("[SECURITY] Log verification error:", e)
+    embedded = os.environ.get("DESKTOP_EMBEDDED") == "1"
+    HOST = "127.0.0.1"
+    PORT = int(os.environ.get("PORT", "5501"))
 
-    # host/port from environment or defaults
-    HOST = os.environ.get("FLASK_RUN_HOST", os.environ.get("HOST", "127.0.0.1"))
-    PORT = int(os.environ.get("FLASK_RUN_PORT", os.environ.get("PORT", 5000)))
-
-    # Update launch_browser to open correct port
-    def launch_browser_with_port(host=HOST, port=PORT):
-        if FLASK_ENV == "production":
-            return
-        time.sleep(1)
-        url = f"http://{host}:{port}/login"
-        try:
-            if sys.platform.startswith('win'):
-                subprocess.run(['start', url], shell=True)
-            elif sys.platform.startswith('darwin'):
-                subprocess.run(['open', url])
-            else:
-                subprocess.run(['xdg-open', url])
-        except Exception as e:
-            print(f"[app] Warning: could not launch browser: {e}")
-
-    # Launch dev browser only in non-production
-    threading.Thread(target=launch_browser_with_port, daemon=True).start()
-
-    # debug flag driven by FLASK_ENV (if FLASK_ENV=production, disable debug)
-    debug_mode = (FLASK_ENV != "production")
-    app.run(host=HOST, port=PORT, debug=debug_mode)
+    if not embedded:
+        # only launch browser in normal dev
+        import threading, subprocess
+        threading.Thread(target=lambda: subprocess.run(['open', f"http://{HOST}:{PORT}/login"]),
+                         daemon=True).start()
+        app.run(host=HOST, port=PORT, debug=True)
+    else:
+        # desktop mode: single process, no reloader, no debug
+        app.run(host=HOST, port=PORT, debug=False, use_reloader=False)

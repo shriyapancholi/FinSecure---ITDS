@@ -6,17 +6,27 @@
   <h2 style="color:var(--accent);margin-bottom:.5rem;">Create account</h2>
   <div class="muted" style="margin-bottom:1rem;">Choose your role (Admin needs a code).</div>
 
-  <form method="post">
+  <form method="post" novalidate>
+    <!-- Username -->
     <div class="mb-3">
-      <label class="form-label muted">Username</label>
-      <input class="form-control" name="username" required>
+      <label class="form-label muted" for="username">Username</label>
+      <input id="username" class="form-control" name="username" required autocomplete="username" autofocus>
     </div>
 
+    <!-- Password -->
     <div class="mb-3">
-      <label class="form-label muted">Password</label>
-      <input class="form-control" name="password" type="password" required>
+      <label class="form-label muted" for="password">Password</label>
+      <div class="position-relative">
+        <input id="password" class="form-control" name="password" type="password" required
+               minlength="6" autocomplete="new-password">
+        <button type="button" id="togglePw"
+                class="btn btn-text small"
+                style="position:absolute; right:.25rem; top:.25rem;">Show</button>
+      </div>
+      <small id="capsWarn" class="text-warning" style="display:none;">Caps Lock is ON</small>
     </div>
 
+    <!-- Role -->
     <div class="mb-3">
       <label class="form-label muted">Role</label>
       <div class="d-flex gap-3">
@@ -31,9 +41,11 @@
       </div>
     </div>
 
+    <!-- Admin code (only when Admin selected) -->
     <div class="mb-3" id="adminCodeWrap" style="display:none;">
-      <label class="form-label muted">Admin code</label>
-      <input class="form-control" name="admin_code" placeholder="Enter admin signup code">
+      <label class="form-label muted" for="admin_code">Admin code</label>
+      <input id="admin_code" class="form-control" name="admin_code" type="password"
+             placeholder="Enter admin signup code" autocomplete="off">
       <div class="form-text">Ask an existing admin for this code.</div>
     </div>
 
@@ -43,14 +55,36 @@
 </div>
 
 <script>
-  const rAdmin = document.getElementById('rAdmin');
+  const rAdmin   = document.getElementById('rAdmin');
   const rAnalyst = document.getElementById('rAnalyst');
   const codeWrap = document.getElementById('adminCodeWrap');
+  const codeInput = document.getElementById('admin_code');
+
   function toggleCode(){
-    codeWrap.style.display = rAdmin.checked ? 'block' : 'none';
+    const isAdmin = rAdmin.checked;
+    codeWrap.style.display = isAdmin ? 'block' : 'none';
+    codeInput.required = isAdmin;     // required only for Admin
+    if (!isAdmin) codeInput.value = '';
   }
+
   rAdmin.addEventListener('change', toggleCode);
   rAnalyst.addEventListener('change', toggleCode);
   toggleCode();
+
+  // Show/Hide password
+  const pw = document.getElementById('password');
+  const toggle = document.getElementById('togglePw');
+  toggle.addEventListener('click', () => {
+    const isPw = pw.type === 'password';
+    pw.type = isPw ? 'text' : 'password';
+    toggle.textContent = isPw ? 'Hide' : 'Show';
+    pw.focus();
+  });
+
+  // Caps Lock warning
+  const caps = document.getElementById('capsWarn');
+  pw.addEventListener('keyup', (e) => {
+    caps.style.display = e.getModifierState && e.getModifierState('CapsLock') ? 'inline' : 'none';
+  });
 </script>
 {% endblock %}
